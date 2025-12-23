@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elder Care Companion - Help</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .help-item {
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+            cursor: pointer;
+        }
+
+        .help-item h3 {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .help-content {
+            display: none;
+            padding-top: 10px;
+            color: var(--secondary-color);
+        }
+
+        .active .help-content {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card" style="max-width: 800px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 data-i18n="help">Help & Guide</h2>
+                <button onclick="window.location.href='dashboard.html'" class="secondary"
+                    style="width: auto; padding: 10px 15px;">
+                    <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
+                </button>
+            </div>
+
+            <div id="helpContainer">
+                <div class="help-item" onclick="this.classList.toggle('active')">
+                    <h3><span data-i18n="help_chat_title">How to use Chat?</span> <i class="fas fa-chevron-down"></i>
+                    </h3>
+                    <div class="help-content" data-i18n="help_chat_content">
+                        Click on 'Companion Chat'. Wait for the widget to load. Type or speak to the AI assistant.
+                    </div>
+                </div>
+
+                <div class="help-item" onclick="this.classList.toggle('active')">
+                    <h3><span data-i18n="help_med_title">Setting Medicine Reminders</span> <i
+                            class="fas fa-chevron-down"></i></h3>
+                    <div class="help-content" data-i18n="help_med_content">
+                        Go to 'Medicines'. Enter name, dosage, and time. Click Save. You will be alerted at the time.
+                    </div>
+                </div>
+
+                <div class="help-item" onclick="this.classList.toggle('active')">
+                    <h3><span data-i18n="help_sos_title">Using SOS</span> <i class="fas fa-chevron-down"></i></h3>
+                    <div class="help-content" data-i18n="help_sos_content">
+                        Tap the big red SOS button in the SOS page. It will sound an alarm and 'notify' emergency
+                        contacts.
+                    </div>
+                </div>
+
+                <div class="help-item" onclick="this.classList.toggle('active')">
+                    <h3><span data-i18n="help_lang_title">Changing Language</span> <i class="fas fa-chevron-down"></i>
+                    </h3>
+                    <div class="help-content" data-i18n="help_lang_content">
+                        Go to Settings. Select Tamil or English from the dropdown. Save Settings.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            applySettings();
+        });
+    </script>
+</body>
+
+</html>

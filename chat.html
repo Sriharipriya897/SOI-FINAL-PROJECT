@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elder Care Companion - Chat</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 60vh;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f9f9f9;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 12px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .message.bot {
+            background: var(--primary-color);
+            color: white;
+            align-self: flex-start;
+            border-top-left-radius: 0;
+        }
+
+        .message.user {
+            background: var(--accent-color);
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+            border-top-right-radius: 0;
+        }
+
+        .chat-input-area {
+            padding: 10px;
+            background: #fff;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #chatInput {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            font-size: 1rem;
+        }
+
+        .icon-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+            transition: transform 0.2s;
+            margin: 0;
+            /* Override global button margin */
+        }
+
+        .icon-btn.mic {
+            background: var(--secondary-color);
+        }
+
+        .icon-btn.send {
+            background: var(--primary-color);
+        }
+
+        .icon-btn:active {
+            transform: scale(0.95);
+        }
+
+        .listening {
+            animation: pulse-red 1.5s infinite;
+            background: var(--error-color) !important;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card" style="width: 100%; max-width: 800px; height: 85vh;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h2 data-i18n="chat">Companion Chat</h2>
+                <button onclick="window.location.href='dashboard.html'" class="secondary"
+                    style="width: auto; padding: 8px 15px; font-size: 1rem;">
+                    <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
+                </button>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Messages go here -->
+                </div>
+                <div class="chat-input-area">
+                    <button class="icon-btn mic" id="micBtn" onclick="toggleMic()">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <input type="text" id="chatInput" placeholder="Type or speak..." autocomplete="off">
+                    <button class="icon-btn send" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/config.js"></script>
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const micBtn = document.getElementById('micBtn');
+        let isListening = false;
+
+        // Fallback for when API is not configured or offline
+        const FALLBACK_RESPONSES = {
+            'en': "I am having trouble connecting to my brain. Please check your internet connection or API settings.",
+            'ta': "என்னால் இணையத்துடன் இணைக்க முடியவில்லை. தயவுசெய்து உங்கள் இணைய இணைப்பைச் சரிபார்க்கவும்."
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Welcome Message
+            const lang = getSettings().lang || 'en';
+            const welcome = lang === 'ta' ? "வணக்கம்! நான் உங்கள் உதவியாளர். என்னிடம் எதையும் கேளுங்கள்." : "Hello! I am your AI companion. Ask me anything.";
+            addMessage(welcome, 'bot');
+            speak(welcome);
+        });
+
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+
+            // 1. User Message
+            addMessage(text, 'user');
+            chatInput.value = '';
+
+            // 2. Loading Indicator
+            const loadingId = addMessage("Thinking...", 'bot', true);
+
+            // 3. Get AI Response
+            try {
+                const response = await getAIResponse(text);
+
+                // Remove loading and show actual response
+                removeMessage(loadingId);
+                addMessage(response, 'bot');
+                speak(response);
+            } catch (error) {
+                removeMessage(loadingId);
+                const lang = getSettings().lang || 'en';
+
+                // Show specific error if it's an API Key or Quota issue
+                let displayMsg = FALLBACK_RESPONSES[lang];
+
+                // Debug mode: Show actual error to help diagnose
+                if (true) {
+                    displayMsg += `\n(Debug Error: ${error.message})`;
+                }
+
+                if (error.message.includes('API key') || error.message.includes('key')) {
+                    displayMsg = lang === 'ta'
+                        ? "API திறவுகோல் தவறாக உள்ளது. தயவுசெய்து அமைப்புகளில் சரிபார்க்கவும்."
+                        : "Error: Invalid API Key. Please check your Settings.";
+                } else if (error.message.includes('quota')) {
+                    displayMsg = "Error: API Quota exceeded. Please try again later.";
+                } else if (error.message.includes('CONFIG')) {
+                    displayMsg = "Error: System Configuration Missing. Please reload the page.";
+                } else if (error.message.includes('fetch')) {
+                    displayMsg = "Error: No Internet Connection or Network Blocked.";
+                }
+
+                addMessage(displayMsg, 'bot');
+                speak("Error occurred");
+            }
+        }
+
+        async function getAIResponse(userParam) {
+            const apiKey = CONFIG.getApiKey();
+            const settings = getSettings();
+            const lang = settings.lang || 'en';
+
+            if (!apiKey) {
+                return lang === 'ta'
+                    ? "தயவுசெய்து அமைப்புகளில் (Settings) API Key-ஐ உள்ளிடவும்."
+                    : "Please set your Google Gemini API Key in Settings to enable intelligence.";
+            }
+
+            const systemPrompt = lang === 'ta'
+                ? "நீங்கள் ஒரு வயதானவர்களுக்கான உதவியாளர். கேள்விகளுக்கு மரியாதையாகவும், சுருக்கமாகவும் (2-3 வரிகளில்) தமிழில் பதில் அளிக்கவும். மருத்துவ கேள்விகளுக்கு பதில் அளித்துவிட்டு மருத்துவரை அணுகுமாறு அறிவுறுத்தவும்."
+                : "You are a compassionate companion for an elderly person. Answer strictly in English. be concise (max 2-3 sentences). If asking for medical advice, give a general helpful answer but ALWAYS advise seeing a doctor.";
+
+            // Use the dynamically discovered model or fallback
+            const model = CONFIG.getModel ? CONFIG.getModel() : 'gemini-1.5-flash';
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `${systemPrompt}\n\nUser: ${userParam}\nAssistant:`
+                            }]
+                        }]
+                    })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error?.message || 'API Error');
+                }
+
+                const data = await response.json();
+                if (!data.candidates || data.candidates.length === 0) {
+                    throw new Error('No response from AI');
+                }
+                return data.candidates[0].content.parts[0].text;
+            } catch (err) {
+                console.error(err);
+                throw err;
+            }
+        }
+
+        function addMessage(text, sender, isLoading = false) {
+            const div = document.createElement('div');
+            div.className = `message ${sender} ${isLoading ? 'loading-msg' : ''}`;
+            div.innerText = text;
+            if (isLoading) div.id = 'msg-' + Date.now();
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return div.id;
+        }
+
+        function removeMessage(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function toggleMic() {
+            if (isListening) return;
+
+            micBtn.classList.add('listening');
+            isListening = true;
+
+            startSpeechRecognition((text) => {
+                chatInput.value = text;
+                micBtn.classList.remove('listening');
+                isListening = false;
+                sendMessage();
+            });
+
+            setTimeout(() => {
+                if (isListening) {
+                    micBtn.classList.remove('listening');
+                    isListening = false;
+                }
+            }, 8000);
+        }
+    </script>
+</body>
+
+</html>

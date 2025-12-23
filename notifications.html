@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elder Care Companion - Notifications</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card" style="max-width: 800px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 data-i18n="notifications">Notifications</h2>
+                <button onclick="window.location.href='dashboard.html'" class="secondary"
+                    style="width: auto; padding: 10px 15px;">
+                    <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
+                </button>
+            </div>
+
+            <div id="notifList" style="text-align: left;">
+                <!-- Notifications injected here -->
+            </div>
+
+            <button onclick="clearNotifs()" class="secondary" style="margin-top: 20px;">Clear All</button>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadNotifs();
+        });
+
+        function loadNotifs() {
+            const list = document.getElementById('notifList');
+            const notifs = JSON.parse(localStorage.getItem('elderNotifications') || '[]');
+
+            list.innerHTML = '';
+            if (notifs.length === 0) {
+                list.innerHTML = '<p class="text-center">No new notifications.</p>';
+                return;
+            }
+
+            notifs.forEach(n => {
+                const item = document.createElement('div');
+                item.className = 'card';
+                item.style.marginBottom = '10px';
+                item.style.padding = '15px';
+                item.style.maxWidth = '100%';
+
+                // Color code based on type
+                let borderLeft = '5px solid var(--primary-color)';
+                if (n.type === 'danger') borderLeft = '5px solid var(--error-color)';
+                if (n.type === 'success') borderLeft = '5px solid var(--success-color)';
+
+                item.style.borderLeft = borderLeft;
+                item.style.textAlign = 'left';
+
+                item.innerHTML = `
+                    <h3>${n.title}</h3>
+                    <p>${n.message}</p>
+                    <small style="color: grey">${new Date(n.time).toLocaleString()}</small>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function clearNotifs() {
+            localStorage.setItem('elderNotifications', '[]');
+            loadNotifs();
+        }
+    </script>
+</body>
+
+</html>

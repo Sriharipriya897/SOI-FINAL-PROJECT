@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elder Care Companion - Health</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card" style="max-width: 800px; width: 100%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 data-i18n="health">Health Tracker</h2>
+                <button onclick="window.location.href='dashboard.html'" class="secondary"
+                    style="width: auto; padding: 10px 15px;">
+                    <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
+                </button>
+            </div>
+
+            <!-- Input Form -->
+            <div class="card" style="background: rgba(0,0,0,0.03); margin-bottom: 20px; text-align: left;">
+                <h3 class="mb-1" data-i18n="log_vitals">Log Vitals</h3>
+                <form id="healthForm">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label data-i18n="sys_bp">Systolic BP</label>
+                            <input type="number" id="bpSys" placeholder="120" required>
+                        </div>
+                        <div>
+                            <label data-i18n="dia_bp">Diastolic BP</label>
+                            <input type="number" id="bpDia" placeholder="80" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label data-i18n="sugar">Blood Sugar (mg/dL)</label>
+                        <input type="number" id="sugar" placeholder="100">
+                    </div>
+                    <div>
+                        <label data-i18n="heart_rate">Heart Rate (BPM)</label>
+                        <input type="number" id="heartRate" placeholder="72" required>
+                    </div>
+
+                    <button type="submit" data-i18n="save">Save Log</button>
+
+                    <button type="button" onclick="clearHealthHistory()" class="alert"
+                        style="margin-top: 15px; background-color: #d64545;">
+                        <i class="fas fa-trash"></i> <span data-i18n="delete_health">Delete Health Data</span>
+                    </button>
+                </form>
+
+                <!-- Health Status Analysis -->
+                <div id="healthStatus" class="hidden"
+                    style="margin-top: 15px; padding: 15px; border-radius: 8px; font-weight: bold; transition: all 0.5s ease;">
+                    <!-- JS will populate this -->
+                </div>
+
+                <!-- Health Status Analysis -->
+                <div id="healthStatus" class="hidden"
+                    style="margin-top: 15px; padding: 15px; border-radius: 8px; font-weight: bold; transition: all 0.5s ease;">
+                    <!-- JS will populate this -->
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div style="height: 300px; width: 100%;">
+                <canvas id="healthChart"></canvas>
+            </div>
+
+            <!-- History List (Last 3) -->
+            <div id="historyList" style="margin-top: 20px; text-align: left;">
+                <!-- Logs -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script>
+        let healthChart;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHealthData();
+            loadFormInputs();
+        });
+
+        const healthForm = document.getElementById('healthForm');
+        healthForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const sys = document.getElementById('bpSys').value;
+            const dia = document.getElementById('bpDia').value;
+            const sugar = document.getElementById('sugar').value;
+
+            const log = {
+                date: new Date().toLocaleDateString(),
+                timestamp: Date.now(),
+                sys,
+                dia,
+                sugar
+            };
+
+            const data = getHealthData();
+            data.push(log);
+            localStorage.setItem('elderHealth', JSON.stringify(data));
+
+            // healthForm.reset(); // User wants values to stay
+            loadHealthData();
+
+            // Speak result
+            analyzeHealth(log, true);
+        });
+
+        // Persist Form Inputs
+        const formInputs = ['bpSys', 'bpDia', 'sugar', 'heartRate'];
+        formInputs.forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                localStorage.setItem('elderHealthForm_' + id, e.target.value);
+            });
+        });
+
+        function loadFormInputs() {
+            formInputs.forEach(id => {
+                const val = localStorage.getItem('elderHealthForm_' + id);
+                if (val) document.getElementById(id).value = val;
+            });
+        }
+
+        function getHealthData() {
+            return JSON.parse(localStorage.getItem('elderHealth') || '[]');
+        }
+
+        function analyzeHealth(log, shouldSpeak) {
+            const settings = getSettings();
+            const lang = settings.lang || 'en';
+
+            const sys = parseInt(log.sys);
+            const dia = parseInt(log.dia);
+            const hr = parseInt(log.hr || 0);
+
+            let status = 'good';
+            let issues = [];
+            let taIssues = [];
+
+            if (sys > 140 || dia > 90) {
+                status = 'bad';
+                issues.push("High Blood Pressure");
+                taIssues.push("இரத்த அழுத்தம் மிக அதிகமாக உள்ளது");
+            } else if (sys < 90 || dia < 60) {
+                status = 'bad';
+                issues.push("Low Blood Pressure");
+                taIssues.push("இரத்த அழுத்தம் குறைவாக உள்ளது");
+            }
+
+            if (hr > 100) {
+                status = 'bad';
+                issues.push("Fast Heart Rate");
+                taIssues.push("இதய துடிப்பு மிகவும் வேகமாக உள்ளது");
+            } else if (hr > 0 && hr < 50) {
+                status = 'bad';
+                issues.push("Slow Heart Rate");
+                taIssues.push("இதய துடிப்பு மிகவும் குறைவாக உள்ளது");
+            }
+
+            const statusDiv = document.getElementById('healthStatus');
+            statusDiv.classList.remove('hidden');
+            statusDiv.style.opacity = '0';
+
+            let msg = "";
+            let displayHTML = "";
+
+            if (isNaN(sys) || isNaN(dia)) {
+                statusDiv.classList.add('hidden');
+                return;
+            }
+
+            if (status === 'good') {
+                statusDiv.style.backgroundColor = '#d4edda';
+                statusDiv.style.color = '#155724';
+                // Add context that this is from the last record
+                const prefix = lang === 'ta' ? "கடைசி பதிவு: " : "Last Record: ";
+                msg = lang === 'ta' ? "உங்கள் உடல்நிலை நன்றாக உள்ளது." : "Your health is Good.";
+                displayHTML = `<i class="fas fa-check-circle" style="font-size: 1.5rem; margin-right: 10px;"></i> <strong>${prefix}</strong>${msg}`;
+            } else {
+                statusDiv.style.backgroundColor = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                const prefix = lang === 'ta' ? "கடைசி பதிவு: " : "Last Record: ";
+                const issueText = lang === 'ta' ? taIssues.join(", மற்றும் ") : issues.join(", ");
+                const advice = lang === 'ta' ? "உடனடியாக மருத்துவரை அணுகவும்." : "Please consult a doctor.";
+                msg = lang === 'ta' ? `${issueText}. ${advice}` : `${issueText}. ${advice}`;
+                displayHTML = `<i class="fas fa-heartbeat" style="font-size: 1.5rem; margin-right: 10px; animation: pulse 1s infinite;"></i> <strong>${prefix}</strong>${msg}`;
+            }
+
+            statusDiv.innerHTML = displayHTML;
+            setTimeout(() => statusDiv.style.opacity = '1', 100);
+
+            if (shouldSpeak) speak(msg);
+        }
+
+        function loadHealthData() {
+            const data = getHealthData();
+            data.sort((a, b) => a.timestamp - b.timestamp);
+
+            renderChart(data);
+
+            const listObj = document.getElementById('historyList');
+            listObj.innerHTML = '<h3 class="mb-1" data-i18n="recent_logs">Recent Logs</h3>';
+
+            // Re-apply translation to injected HTML
+            updateText(getSettings().lang);
+
+            if (data.length === 0) listObj.innerHTML += `<p data-i18n="no_data">${getSettings().lang === 'ta' ? 'தரவு எதுவும் பதிவு செய்யப்படவில்லை.' : 'No data recorded yet.'}</p>`;
+            else {
+                // Restore status functionality for the latest log
+                const latestLog = data[data.length - 1]; // data is sorted ascending
+                analyzeHealth(latestLog, false); // false = don't speak on load
+            }
+
+            [...data].reverse().slice(0, 3).forEach(d => {
+                const item = document.createElement('div');
+                item.style.borderBottom = '1px solid #ddd';
+                item.style.padding = '10px 0';
+                item.style.display = 'flex';
+                item.style.justifyContent = 'space-between';
+                item.style.alignItems = 'center';
+
+                item.innerHTML = `
+                    <div>
+                        <strong>${d.date}</strong>: BP ${d.sys}/${d.dia} | HR: ${d.hr || '-'} | Sugar: ${d.sugar || '-'}
+                    </div>
+                    <button class="secondary" onclick="deleteHealthLog(${d.timestamp})" style="padding: 5px 10px; font-size: 0.8rem; background-color: #f8d7da; color: #721c24;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                listObj.appendChild(item);
+            });
+        }
+
+        function renderChart(data) {
+            const ctx = document.getElementById('healthChart').getContext('2d');
+
+            // Limit to last 7 entries for clarity
+            const recentData = data.slice(-7);
+
+            const labels = recentData.map(d => d.date);
+            const sysData = recentData.map(d => d.sys);
+            const diaData = recentData.map(d => d.dia);
+
+            if (healthChart) healthChart.destroy();
+
+            healthChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Systolic BP',
+                            data: sysData,
+                            borderColor: 'rgb(255, 99, 132)',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Diastolic BP',
+                            data: diaData,
+                            borderColor: 'rgb(54, 162, 235)',
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        function clearHealthHistory() {
+            localStorage.removeItem('elderHealth');
+            loadHealthData(); // Reloads chart and list (empty)
+            document.getElementById('healthStatus').classList.add('hidden');
+
+            const btn = document.querySelector('button[onclick="clearHealthHistory()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Deleted';
+            setTimeout(() => btn.innerHTML = originalText, 2000);
+
+            // Clear inputs too
+            const formInputs = ['bpSys', 'bpDia', 'sugar', 'heartRate'];
+            formInputs.forEach(id => {
+                localStorage.removeItem('elderHealthForm_' + id);
+                document.getElementById(id).value = '';
+            });
+        }
+
+        function deleteHealthLog(timestamp) {
+            let data = getHealthData();
+            data = data.filter(d => d.timestamp !== timestamp);
+            localStorage.setItem('elderHealth', JSON.stringify(data));
+            loadHealthData();
+
+            // Re-analyze latest or hide
+            if (data.length > 0) {
+                analyzeHealth(data[data.length - 1], false);
+            } else {
+                document.getElementById('healthStatus').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+
+</html>

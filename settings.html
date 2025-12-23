@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elder Care Companion - Settings</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card" style="max-width: 600px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 data-i18n="settings">Settings</h2>
+                <button onclick="window.history.back()" class="secondary" style="width: auto; padding: 10px 15px;">
+                    <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
+                </button>
+            </div>
+
+            <!-- Language -->
+            <div class="mb-2">
+                <label for="settingLanguage" data-i18n="language"
+                    style="display: block; margin-bottom: 10px; font-weight: bold;">Language</label>
+                <select id="settingLanguage">
+                    <option value="en">English</option>
+                    <option value="ta">தமிழ் (Tamil)</option>
+                </select>
+            </div>
+
+            <!-- Theme -->
+            <div class="mb-2">
+                <label for="settingTheme" data-i18n="theme"
+                    style="display: block; margin-bottom: 10px; font-weight: bold;">Color Theme</label>
+                <select id="settingTheme">
+                    <option value="blue" data-i18n="theme_blue">Blue (Default)</option>
+                    <option value="dark" data-i18n="theme_dark">Dark Mode</option>
+                    <option value="contrast" data-i18n="theme_contrast">High Contrast</option>
+                </select>
+            </div>
+
+            <!-- Font Size -->
+            <div class="mb-2">
+                <label for="settingFontSize" data-i18n="font_size"
+                    style="display: block; margin-bottom: 10px; font-weight: bold;">Font Size</label>
+                <select id="settingFontSize">
+                    <option value="normal" data-i18n="size_normal">Normal</option>
+                    <option value="large" data-i18n="size_large">Large</option>
+                    <option value="xl" data-i18n="size_xl">Extra Large</option>
+                </select>
+            </div>
+
+            <hr style="margin: 30px 0; border: 1px solid #ddd;">
+
+            <!-- AI API Settings -->
+            <h3 style="margin-bottom: 15px;" data-i18n="api_settings">AI API Settings</h3>
+            <div class="mb-2">
+                <label for="geminiApiKey" data-i18n="api_key"
+                    style="display: block; margin-bottom: 10px; font-weight: bold;">Google Gemini API Key</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="password" id="geminiApiKey" data-i18n-placeholder="api_placeholder"
+                        placeholder="Enter API Key"
+                        style="flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 8px;">
+                    <button id="toggleApiBtn" type="button" class="secondary"
+                        style="width: 50px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-eye" id="eyeIcon"></i>
+                    </button>
+                </div>
+                <div style="margin-top: 10px; display: flex; align-items: center;">
+                    <button type="button" onclick="testApiConnection()" class="secondary" data-i18n="test_api"
+                        style="width: auto; font-size: 0.9rem; padding: 8px 15px; margin: 0;">Test API</button>
+                    <span id="apiStatus" style="margin-left: 15px; font-weight: bold; font-size: 0.9rem;"></span>
+                </div>
+            </div>
+
+            <hr style="margin: 30px 0; border: 1px solid #ddd;">
+
+            <!-- EmailJS Configuration for SOS Alerts -->
+            <h3 style="margin-bottom: 15px;">Emergency Alert Settings</h3>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">
+                Configure automatic email alerts for SOS emergencies.
+                <a href="https://www.emailjs.com/" target="_blank" style="color: var(--primary-color);">Get free EmailJS
+                    account →</a>
+            </p>
+
+            <div class="mb-2">
+                <label for="emergencyEmail" style="display: block; margin-bottom: 10px; font-weight: bold;">
+                    Emergency Contact Email
+                </label>
+                <input type="email" id="emergencyEmail" placeholder="contact@example.com"
+                    style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px;">
+            </div>
+
+            <div class="mb-2">
+                <label for="emailjsServiceId" style="display: block; margin-bottom: 10px; font-weight: bold;">
+                    EmailJS Service ID
+                </label>
+                <input type="text" id="emailjsServiceId" placeholder="service_xxxxxxx"
+                    style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px;">
+            </div>
+
+            <div class="mb-2">
+                <label for="emailjsTemplateId" style="display: block; margin-bottom: 10px; font-weight: bold;">
+                    EmailJS Template ID
+                </label>
+                <input type="text" id="emailjsTemplateId" placeholder="template_xxxxxxx"
+                    style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px;">
+            </div>
+
+            <div class="mb-2">
+                <label for="emailjsPublicKey" style="display: block; margin-bottom: 10px; font-weight: bold;">
+                    EmailJS Public Key
+                </label>
+                <input type="text" id="emailjsPublicKey" placeholder="Your public key"
+                    style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px;">
+            </div>
+
+            <button onclick="saveAndApply()" data-i18n="save">Save Settings</button>
+
+            <button onclick="deleteEmailConfig()" class="alert" style="margin-top: 15px; background-color: #d64545;">
+                <i class="fas fa-trash"></i> <span data-i18n="delete_email">Delete Email Data</span>
+            </button>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/config.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const settings = getSettings();
+
+            // Set current values
+            document.getElementById('settingLanguage').value = settings.lang;
+            document.getElementById('settingTheme').value = settings.theme;
+            document.getElementById('settingFontSize').value = settings.fontSize;
+
+            // Load API Key
+            document.getElementById('geminiApiKey').value = CONFIG.getApiKey();
+
+            // Load Email Settings
+            const emailConfig = JSON.parse(localStorage.getItem('elderEmailConfig') || '{}');
+            if (emailConfig.emergencyEmail) document.getElementById('emergencyEmail').value = emailConfig.emergencyEmail;
+            if (emailConfig.serviceId) document.getElementById('emailjsServiceId').value = emailConfig.serviceId;
+            if (emailConfig.templateId) document.getElementById('emailjsTemplateId').value = emailConfig.templateId;
+            if (emailConfig.publicKey) document.getElementById('emailjsPublicKey').value = emailConfig.publicKey;
+
+            // Setup Eye Icon Toggle
+            const toggleBtn = document.getElementById('toggleApiBtn');
+            const apiInput = document.getElementById('geminiApiKey');
+            const eyeIcon = document.getElementById('eyeIcon');
+
+            toggleBtn.addEventListener('click', () => {
+                if (apiInput.type === 'password') {
+                    apiInput.type = 'text';
+                    eyeIcon.classList.replace('fa-eye', 'fa-eye-slash');
+                } else {
+                    apiInput.type = 'password';
+                    eyeIcon.classList.replace('fa-eye-slash', 'fa-eye');
+                }
+            });
+
+            // Auto-Save Email Inputs
+            const emailInputs = ['emergencyEmail', 'emailjsServiceId', 'emailjsTemplateId', 'emailjsPublicKey'];
+            emailInputs.forEach(id => {
+                document.getElementById(id).addEventListener('input', () => {
+                    const config = {
+                        emergencyEmail: document.getElementById('emergencyEmail').value.trim(),
+                        serviceId: document.getElementById('emailjsServiceId').value.trim(),
+                        templateId: document.getElementById('emailjsTemplateId').value.trim(),
+                        publicKey: document.getElementById('emailjsPublicKey').value.trim()
+                    };
+                    localStorage.setItem('elderEmailConfig', JSON.stringify(config));
+                });
+            });
+        });
+
+        async function testApiConnection() {
+            const statusSpan = document.getElementById('apiStatus');
+            const key = document.getElementById('geminiApiKey').value.trim();
+
+            if (!key) {
+                statusSpan.style.color = 'var(--error-color)';
+                statusSpan.innerText = 'Please enter a key first';
+                return;
+            }
+
+            statusSpan.style.color = 'orange'; // Warning/Loading color
+            statusSpan.innerText = 'Testing...';
+
+            // Temporarily set key to test
+            CONFIG.setApiKey(key);
+
+            const result = await CONFIG.testApiKey();
+
+            if (result.success) {
+                statusSpan.style.color = 'green';
+                statusSpan.innerText = '✓ ' + result.message;
+            } else {
+                statusSpan.style.color = 'var(--error-color)';
+                statusSpan.innerText = '✗ ' + result.message;
+            }
+        }
+
+        function saveAndApply() {
+            const lang = document.getElementById('settingLanguage').value;
+            const theme = document.getElementById('settingTheme').value;
+            const fontSize = document.getElementById('settingFontSize').value;
+            const apiKey = document.getElementById('geminiApiKey').value;
+
+            // Save API Key via Config
+            CONFIG.setApiKey(apiKey);
+
+            // Save Email Settings
+            const emailConfig = {
+                emergencyEmail: document.getElementById('emergencyEmail').value.trim(),
+                serviceId: document.getElementById('emailjsServiceId').value.trim(),
+                templateId: document.getElementById('emailjsTemplateId').value.trim(),
+                publicKey: document.getElementById('emailjsPublicKey').value.trim()
+            };
+            localStorage.setItem('elderEmailConfig', JSON.stringify(emailConfig));
+
+            const newSettings = {
+                lang: lang,
+                theme: theme,
+                fontSize: fontSize
+            };
+
+            saveSettings(newSettings);
+            // Re-apply immediately helps visual feedback
+
+            // Visual feedback without blocking alert
+            const saveBtn = document.querySelector('button[onclick="saveAndApply()"]');
+            const originalText = saveBtn.innerText;
+            saveBtn.innerText = lang === 'ta' ? 'சேமிக்கப்பட்டது!' : 'Saved!';
+            saveBtn.style.backgroundColor = '#28a745';
+
+            setTimeout(() => {
+                saveBtn.innerText = originalText;
+                saveBtn.style.backgroundColor = '';
+            }, 2000);
+        }
+
+        function deleteEmailConfig() {
+            localStorage.removeItem('elderEmailConfig');
+
+            // Clear fields
+            document.getElementById('emergencyEmail').value = '';
+            document.getElementById('emailjsServiceId').value = '';
+            document.getElementById('emailjsTemplateId').value = '';
+            document.getElementById('emailjsPublicKey').value = '';
+
+            // Visual feedback
+            const deleteBtn = document.querySelector('button[onclick="deleteEmailConfig()"]');
+            const originalText = deleteBtn.innerHTML;
+            const lang = document.getElementById('settingLanguage').value;
+
+            deleteBtn.innerHTML = `<i class="fas fa-check"></i> ${lang === 'ta' ? 'அழிக்கப்பட்டது' : 'Deleted'}`;
+
+            setTimeout(() => {
+                deleteBtn.innerHTML = originalText;
+            }, 2000);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elder Care Companion - Object Detection</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+    <style>
+        #camContainer {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        video {
+            width: 100%;
+            border-radius: 12px;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card" style="max-width: 800px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 data-i18n="object_detection">Object Detection</h2>
+                <button onclick="window.location.href='dashboard.html'" class="secondary"
+                    style="width: auto; padding: 10px 15px;">
+                    <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
+                </button>
+            </div>
+
+            <p class="mb-2">Point camera at objects to identify them.</p>
+
+            <div id="loadingMsg">Loading AI Model... Please wait.</div>
+
+            <div id="camContainer" class="hidden">
+                <video id="webcam" autoplay playsinline muted></video>
+                <canvas id="canvas"></canvas>
+            </div>
+
+            <button id="startBtn" onclick="enableCam()" class="hidden" style="margin-top:20px;">
+                <i class="fas fa-camera"></i> Start Camera
+            </button>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script>
+        let model = undefined;
+        let lastSpoken = "";
+        let lastSpokenTime = 0;
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const loadingMsg = document.getElementById('loadingMsg');
+        const startBtn = document.getElementById('startBtn');
+
+        // Load Model
+        cocoSsd.load().then(loadedModel => {
+            model = loadedModel;
+            loadingMsg.classList.add('hidden');
+            startBtn.classList.remove('hidden');
+        });
+
+        function enableCam() {
+            if (!model) return;
+
+            navigator.mediaDevices.getUserMedia({
+                video: { width: 640, height: 480 },
+                audio: false
+            }).then(stream => {
+                video.srcObject = stream;
+                video.addEventListener('loadeddata', predictWebcam);
+                document.getElementById('camContainer').classList.remove('hidden');
+                startBtn.classList.add('hidden');
+            });
+        }
+
+        function predictWebcam() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            model.detect(video).then(predictions => {
+                try {
+                    renderPredictions(predictions);
+                } catch (e) {
+                    console.error("Render Error:", e);
+                }
+                requestAnimationFrame(predictWebcam);
+            });
+        }
+
+        function renderPredictions(predictions) {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+            // Font settings
+            ctx.font = '24px sans-serif';
+            ctx.textBaseline = 'top';
+
+            const settings = getSettings();
+            const lang = settings.lang || 'en';
+
+            predictions.forEach(prediction => {
+                const x = prediction.bbox[0];
+                const y = prediction.bbox[1];
+                const width = prediction.bbox[2];
+                const height = prediction.bbox[3];
+
+                // Draw bounding box
+                ctx.strokeStyle = '#00FFFF';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(x, y, width, height);
+
+                // Translate Label
+                let label = prediction.class;
+                if (lang === 'ta' && COCO_TRANSLATIONS && COCO_TRANSLATIONS[label]) {
+                    label = COCO_TRANSLATIONS[label];
+                }
+
+                // Draw Background
+                ctx.fillStyle = '#00FFFF';
+                const textWidth = ctx.measureText(label).width;
+                ctx.fillRect(x, y, textWidth + 10, 30);
+
+                // Draw Text
+                ctx.fillStyle = '#000000';
+                ctx.fillText(label, x + 5, y + 2);
+
+                // Speak
+                debounceSpeak(label, lang);
+            });
+        }
+
+        function debounceSpeak(label, lang) {
+            const now = Date.now();
+            // Don't repeat same word within 4 seconds
+            if (lastSpoken !== label || (now - lastSpokenTime) > 4000) {
+                lastSpoken = label;
+                lastSpokenTime = now;
+
+                // Construct Natural Sentence
+                let sentence = "";
+                if (lang === 'ta') {
+                    sentence = `${label} தெரிகிறது`; // "Object is seen"
+                } else {
+                    sentence = `I see a ${label}`;
+                }
+
+                speak(sentence, lang === 'ta' ? 'ta-IN' : 'en-US');
+            }
+        }
+    </script>
+</body>
+
+</html>

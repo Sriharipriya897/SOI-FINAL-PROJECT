@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elder Care Companion - Medicines</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card" style="max-width: 800px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 data-i18n="medicine">Medicines</h2>
+                <button onclick="window.location.href='dashboard.html'" class="secondary"
+                    style="width: auto; padding: 10px 15px;">
+                    <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
+                </button>
+            </div>
+
+            <!-- Add Medicine Form -->
+            <div class="card" style="background: rgba(0,0,0,0.03); margin-bottom: 20px; text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 class="mb-1">Add Reminder</h3>
+                    <button type="button" onclick="testAudio()" class="secondary"
+                        style="padding: 5px 10px; font-size: 0.8rem;">
+                        <i class="fas fa-volume-up"></i> Test Sound
+                    </button>
+                </div>
+                <form id="medForm">
+                    <input type="text" id="medName" placeholder="Medicine Name (e.g., Metformin)" required>
+                    <input type="text" id="medDosage" placeholder="Dosage (e.g., 1 tablet after food)" required>
+                    <input type="time" id="medTime" required>
+
+                    <button type="submit" data-i18n="save">Save</button>
+                </form>
+            </div>
+
+            <!-- List -->
+            <div id="medList" style="text-align: left;">
+                <!-- Items will be injected here -->
+            </div>
+
+            <button onclick="clearAllMedicines()" class="alert" style="margin-top: 20px; background-color: #d64545;">
+                <i class="fas fa-trash"></i> Delete All Medicines
+            </button>
+        </div>
+    </div>
+
+    <!-- Alarm Audio -->
+    <audio id="alarmSound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" preload="auto"></audio>
+
+    <script src="js/utils.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadReminders();
+            // Check immediately in case we opened it right on time
+            checkReminders();
+            // Then check every minute
+            setInterval(checkReminders, 60000);
+        });
+
+        const medForm = document.getElementById('medForm');
+        medForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('medName').value;
+            const dosage = document.getElementById('medDosage').value;
+            const time = document.getElementById('medTime').value;
+
+            const reminder = {
+                id: Date.now(),
+                name,
+                dosage,
+                time
+            };
+
+            const reminders = getReminders();
+            reminders.push(reminder);
+            localStorage.setItem('elderReminders', JSON.stringify(reminders));
+
+            medForm.reset();
+            loadReminders();
+        });
+
+        function getReminders() {
+            return JSON.parse(localStorage.getItem('elderReminders') || '[]');
+        }
+
+        function loadReminders() {
+            const list = document.getElementById('medList');
+            const reminders = getReminders();
+
+            list.innerHTML = '';
+            if (reminders.length === 0) {
+                list.innerHTML = '<p class="text-center" style="color:var(--secondary-color)">No reminders set.</p>';
+                return;
+            }
+
+            reminders.sort((a, b) => a.time.localeCompare(b.time));
+
+            reminders.forEach(r => {
+                const item = document.createElement('div');
+                item.className = 'card';
+                item.style.marginBottom = '10px';
+                item.style.padding = '15px';
+                item.style.display = 'flex';
+                item.style.justifyContent = 'space-between';
+                item.style.alignItems = 'center';
+                // Override card width for list items
+                item.style.maxWidth = '100%';
+
+                item.innerHTML = `
+                    <div>
+                        <strong style="font-size: 1.2rem;">${r.time}</strong>
+                        <h4 style="margin: 5px 0;">${r.name}</h4>
+                        <p>${r.dosage}</p>
+                    </div>
+                    <button class="alert" onclick="deleteReminder(${r.id})" style="width: auto; padding: 8px 15px;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        window.deleteReminder = function (id) {
+            let reminders = getReminders();
+            reminders = reminders.filter(r => r.id !== id);
+            localStorage.setItem('elderReminders', JSON.stringify(reminders));
+            loadReminders();
+        }
+
+        function checkReminders() {
+            const now = new Date();
+            const currentHours = String(now.getHours()).padStart(2, '0');
+            const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+            const currentTime = `${currentHours}:${currentMinutes}`;
+
+            const reminders = getReminders();
+            reminders.forEach(r => {
+                if (r.time === currentTime) {
+                    playAlert(r);
+                }
+            });
+        }
+
+        function playAlert(reminder) {
+            const audio = document.getElementById('alarmSound');
+            audio.play().catch(e => {
+                console.log('Audio autoplay blocked', e);
+                alert("Please interact with the page (click somewhere) to allow audio playback.");
+            });
+
+            const msg = `Time to take medicine: ${reminder.name} (${reminder.dosage})`;
+            speak(msg);
+            alert(msg);
+        }
+
+        function testAudio() {
+            const audio = document.getElementById('alarmSound');
+            audio.currentTime = 0;
+            audio.play().catch(e => alert("Audio blocked. Click the page first!"));
+            speak("Testing alarm sound.");
+        }
+
+        function clearAllMedicines() {
+            localStorage.removeItem('elderReminders');
+            loadReminders();
+
+            const btn = document.querySelector('button[onclick="clearAllMedicines()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> All Deleted';
+            setTimeout(() => btn.innerHTML = originalText, 2000);
+        }
+    </script>
+</body>
+
+</html>

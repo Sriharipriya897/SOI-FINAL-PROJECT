@@ -1,0 +1,178 @@
+:root {
+    /* Base Blue Theme (Default) */
+    --bg-color: #f0f4f8;
+    --text-color: #102a43;
+    --primary-color: #334e68;
+    --secondary-color: #627d98;
+    --accent-color: #2cb1bc;
+    --card-bg: #ffffff;
+    --error-color: #d64545;
+    --success-color: #38a169;
+    --warning-color: #e6fffa;
+    --border-radius: 12px;
+    
+    /* Font Sizes (Base) */
+    --base-font-size: 18px;
+    --heading-font-size: 2rem;
+    --btn-font-size: 1.2rem;
+}
+
+/* Dark Theme */
+body.dark-theme {
+    --bg-color: #102a43;
+    --text-color: #f0f4f8;
+    --primary-color: #486581;
+    --secondary-color: #829ab1;
+    --accent-color: #4dc0b5;
+    --card-bg: #243b53;
+}
+
+/* High Contrast Theme */
+body.high-contrast {
+    --bg-color: #ffffff;
+    --text-color: #000000;
+    --primary-color: #000000;
+    --secondary-color: #000000;
+    --accent-color: #0000ff;
+    --card-bg: #ffffff;
+    border: 2px solid black;
+}
+
+/* Font Size Scaling */
+body.font-large {
+    --base-font-size: 22px;
+    --heading-font-size: 2.5rem;
+    --btn-font-size: 1.5rem;
+}
+
+body.font-xl {
+    --base-font-size: 26px;
+    --heading-font-size: 3rem;
+    --btn-font-size: 1.8rem;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-size: var(--base-font-size);
+    line-height: 1.6;
+    transition: background-color 0.3s, color 0.3s, font-size 0.3s;
+    min-height: 100vh;
+}
+
+/* Utility Layouts */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.card {
+    background-color: var(--card-bg);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+}
+
+/* Inputs & Buttons */
+input {
+    width: 100%;
+    padding: 15px;
+    margin: 10px 0;
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    background: var(--card-bg);
+    color: var(--text-color);
+}
+
+button {
+    cursor: pointer;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 15px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: var(--btn-font-size);
+    transition: transform 0.1s;
+    margin-top: 10px;
+    width: 100%;
+}
+
+button:hover {
+    transform: scale(1.02);
+    filter: brightness(110%);
+}
+
+button.secondary {
+    background-color: var(--secondary-color);
+}
+
+button.alert {
+    background-color: var(--error-color);
+}
+
+/* Utility */
+.hidden {
+    display: none !important;
+}
+
+.text-center { text-align: center; }
+.mb-1 { margin-bottom: 1rem; }
+.mb-2 { margin-bottom: 2rem; }
+
+/* Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    width: 100%;
+    max-width: 1000px;
+}
+
+.dashboard-card {
+    background-color: var(--card-bg);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    text-align: center;
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--text-color);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    border: 2px solid transparent;
+}
+
+.dashboard-card:hover {
+    border-color: var(--accent-color);
+    transform: translateY(-5px);
+}
+
+.dashboard-card i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+.high-contrast .dashboard-card {
+    border: 2px solid black;
+}

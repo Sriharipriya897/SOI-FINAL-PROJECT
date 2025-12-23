@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elder Care Companion - Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="container" style="justify-content: flex-start; padding-top: 40px;">
+        <header
+            style="width: 100%; max-width: 1000px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+            <div>
+                <h1 data-i18n="app_title">Elder Care Companion</h1>
+                <p><span data-i18n="welcome">Welcome</span>, <span id="usernameDisplay">User</span></p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="window.location.href='settings.html'" class="secondary"
+                    style="padding: 10px 20px; margin: 0;">
+                    <i class="fas fa-cog"></i> <span data-i18n="settings">Settings</span>
+                </button>
+                <button id="logoutBtn" class="alert" style="padding: 10px 20px; margin: 0;">
+                    <i class="fas fa-sign-out-alt"></i> <span data-i18n="logout">Logout</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Chat -->
+            <a href="chat.html" class="dashboard-card">
+                <i class="fas fa-comments"></i>
+                <h3 data-i18n="chat">Companion Chat</h3>
+            </a>
+
+            <!-- Object Detection -->
+            <a href="object-detection.html" class="dashboard-card">
+                <i class="fas fa-eye"></i>
+                <h3 data-i18n="object_detection">Object Detection</h3>
+            </a>
+
+            <!-- Fall Detection -->
+            <a href="fall-detection.html" class="dashboard-card">
+                <i class="fas fa-person-falling"></i>
+                <h3 data-i18n="fall_detection">Fall Detection</h3>
+            </a>
+
+            <!-- Medicine -->
+            <a href="medicine.html" class="dashboard-card">
+                <i class="fas fa-pills"></i>
+                <h3 data-i18n="medicine">Medicines</h3>
+            </a>
+
+            <!-- SOS -->
+            <a href="sos.html" class="dashboard-card" style="border-color: var(--error-color);">
+                <i class="fas fa-ambulance" style="color: var(--error-color);"></i>
+                <h3 data-i18n="sos" style="color: var(--error-color);">SOS Emergency</h3>
+            </a>
+
+            <!-- Health -->
+            <a href="health.html" class="dashboard-card">
+                <i class="fas fa-heartbeat"></i>
+                <h3 data-i18n="health">Health Tracker</h3>
+            </a>
+
+            <!-- Profile -->
+            <a href="profile.html" class="dashboard-card">
+                <i class="fas fa-user-circle"></i>
+                <h3 data-i18n="profile">My Profile</h3>
+            </a>
+
+            <!-- Notifications -->
+            <a href="notifications.html" class="dashboard-card">
+                <i class="fas fa-bell"></i>
+                <h3 data-i18n="notifications">Notifications</h3>
+            </a>
+
+            <!-- Help -->
+            <a href="help.html" class="dashboard-card">
+                <i class="fas fa-question-circle"></i>
+                <h3 data-i18n="help">Help & Guide</h3>
+            </a>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = checkAuth();
+            if (user && user.username) {
+                document.getElementById('usernameDisplay').innerText = user.username;
+            }
+        });
+    </script>
+</body>
+
+</html>

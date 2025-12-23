@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elder Care Companion - SOS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .sos-btn {
+            background-color: var(--error-color);
+            color: white;
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            font-size: 3rem;
+            border: 10px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 20px rgba(214, 69, 69, 0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 50px auto;
+            animation: pulse 2s infinite;
+            cursor: pointer;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(214, 69, 69, 0.7);
+            }
+
+            70% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 20px rgba(214, 69, 69, 0);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(214, 69, 69, 0);
+            }
+        }
+
+        .alert-active {
+            background-color: red !important;
+            animation: flash 0.5s infinite;
+        }
+
+        @keyframes flash {
+            0% {
+                background-color: red;
+            }
+
+            50% {
+                background-color: darkred;
+            }
+
+            100% {
+                background-color: red;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card" style="max-width: 600px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 data-i18n="sos">SOS Emergency</h2>
+                <button onclick="window.location.href='dashboard.html'" class="secondary"
+                    style="width: auto; padding: 10px 15px;">
+                    <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
+                </button>
+            </div>
+
+            <p class="mb-2" style="font-size: 1.2rem; margin-top: 20px;">
+                Press the button below to send an emergency alert.
+            </p>
+
+            <button class="sos-btn" id="sosBtn" onclick="triggerSOS()">
+                <i class="fas fa-ambulance"></i>
+                <span style="font-size: 2rem; display: block; margin-top: 10px;">SOS</span>
+            </button>
+
+            <div id="statusMsg" class="hidden"
+                style="margin-top: 20px; font-weight: bold; font-size: 1.2rem; color: var(--error-color);">
+                <div>Alert Sent! Opening Email & WhatsApp...</div>
+                <div style="font-size: 1rem; color: black; margin-top: 10px;">Please confirm sending in the external
+                    apps.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Siren Sound -->
+    <audio id="sirenSound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock_short.ogg"
+        preload="auto"></audio>
+
+    <!-- EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+    <script src="js/utils.js"></script>
+    <script>
+        let isSOSActive = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAuto = urlParams.get('auto');
+            if (isAuto === 'true') {
+                // Auto trigger after a small delay to ensure page load
+                setTimeout(triggerSOS, 1000);
+            }
+        });
+
+        function triggerSOS() {
+            if (isSOSActive) {
+                stopSOS();
+                return;
+            }
+
+            isSOSActive = true;
+            document.body.classList.add('alert-active');
+
+            const btn = document.getElementById('sosBtn');
+            btn.innerHTML = '<i class="fas fa-stop"></i><span style="font-size: 2rem; display: block; margin-top: 10px;">STOP</span>';
+
+            const status = document.getElementById('statusMsg');
+            status.classList.remove('hidden');
+
+            // Audio
+            const audio = document.getElementById('sirenSound');
+            audio.loop = true;
+            audio.play().catch(console.error);
+
+            // Precise AI Confirmation as requested
+            const msg = "SOS alert sent successfully to your emergency contacts.";
+            speak(msg);
+
+            sendAlerts();
+
+            // Log notification
+            const notif = {
+                title: 'SOS Alert Sent',
+                message: 'Emergency SOS triggered at ' + new Date().toLocaleTimeString(),
+                time: new Date().toISOString(),
+                type: 'danger'
+            };
+            const notifications = JSON.parse(localStorage.getItem('elderNotifications') || '[]');
+            notifications.unshift(notif);
+            localStorage.setItem('elderNotifications', JSON.stringify(notifications));
+        }
+
+        function stopSOS() {
+            isSOSActive = false;
+            document.body.classList.remove('alert-active');
+
+            const btn = document.getElementById('sosBtn');
+            btn.innerHTML = '<i class="fas fa-ambulance"></i><span style="font-size: 2rem; display: block; margin-top: 10px;">SOS</span>';
+
+            document.getElementById('statusMsg').classList.add('hidden');
+
+            const audio = document.getElementById('sirenSound');
+            audio.pause();
+            audio.currentTime = 0;
+
+            // Allow re-trigger if needed, but remove query param to avoid loop on refresh
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        async function sendAlerts() {
+            const profile = JSON.parse(localStorage.getItem('elderProfile') || '{}');
+            const emailConfig = JSON.parse(localStorage.getItem('elderEmailConfig') || '{}');
+
+            const userName = profile.name || 'Elderly User';
+            const contactPhone = profile.contactPhone || '';
+            const time = new Date().toLocaleString();
+
+            // Get user location if available
+            let location = 'Location unavailable';
+            if (navigator.geolocation) {
+                try {
+                    const position = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+                    });
+                    location = `Lat: ${position.coords.latitude.toFixed(4)}, Lon: ${position.coords.longitude.toFixed(4)}`;
+                } catch (err) {
+                    console.log('Location access denied or unavailable');
+                }
+            }
+
+            const message = `🚨 SOS EMERGENCY!\n\nUser: ${userName}\nNeeds immediate help!\n\nTime: ${time}\nLocation: ${location}\n\nPlease contact them immediately.`;
+
+            // 1. Send Email via EmailJS (if configured)
+            if (emailConfig.serviceId && emailConfig.templateId && emailConfig.publicKey && emailConfig.emergencyEmail) {
+                try {
+                    // Initialize EmailJS
+                    emailjs.init(emailConfig.publicKey);
+
+                    // Send email
+                    const response = await emailjs.send(
+                        emailConfig.serviceId,
+                        emailConfig.templateId,
+                        {
+                            to_email: emailConfig.emergencyEmail,
+                            user_name: userName,
+                            emergency_message: message,
+                            timestamp: time,
+                            location: location
+                        }
+                    );
+
+                    console.log('Email sent successfully!', response);
+
+                    // Update status message
+                    document.getElementById('statusMsg').innerHTML = `
+                        <div style="color: green;">✓ Email sent successfully to ${emailConfig.emergencyEmail}!</div>
+                        <div style="font-size: 1rem; color: black; margin-top: 10px;">Opening WhatsApp as backup...</div>
+                    `;
+
+                } catch (error) {
+                    console.error('EmailJS Error:', error);
+
+                    // Show error but continue with fallback
+                    document.getElementById('statusMsg').innerHTML = `
+                        <div style="color: orange;">⚠ Email failed. Check settings.</div>
+                        <div style="font-size: 1rem; color: black; margin-top: 10px;">Opening WhatsApp and mailto as backup...</div>
+                    `;
+
+                    // Fallback to mailto
+                    const encodedMsg = encodeURIComponent(message);
+                    const mailLink = `mailto:${emailConfig.emergencyEmail || ''}?subject=SOS Alert - ${userName}&body=${encodedMsg}`;
+                    setTimeout(() => window.location.href = mailLink, 2000);
+                }
+            } else {
+                // No EmailJS configured - use fallback methods
+                console.log('EmailJS not configured. Using fallback methods.');
+                const encodedMsg = encodeURIComponent(message);
+                const mailLink = `mailto:?subject=SOS Alert - ${userName}&body=${encodedMsg}`;
+                setTimeout(() => window.location.href = mailLink, 1500);
+            }
+
+            // 2. WhatsApp Web Link (always send as backup)
+            const encodedMsg = encodeURIComponent(message);
+            let waLink = `https://wa.me/?text=${encodedMsg}`;
+            if (contactPhone) {
+                waLink = `https://wa.me/${contactPhone.replace(/\D/g, '')}?text=${encodedMsg}`;
+            }
+
+            setTimeout(() => {
+                window.open(waLink, '_blank');
+            }, 1000);
+        }
+    </script>
+</body>
+
+</html>

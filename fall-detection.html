@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elder Care Companion - Fall Detection</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        #camContainer {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border: 5px solid var(--primary-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        video {
+            width: 100%;
+            display: block;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 2;
+        }
+
+        canvas {
+            display: none;
+            /* Processing only */
+        }
+
+        .monitor-bar {
+            height: 10px;
+            width: 100%;
+            background: #ddd;
+            margin-top: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .monitor-val {
+            height: 100%;
+            width: 0%;
+            background: var(--success-color);
+            transition: width 0.1s;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card" style="max-width: 800px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 data-i18n="fall_detection">Fall Detection</h2>
+                <button onclick="window.location.href='dashboard.html'" class="secondary"
+                    style="width: auto; padding: 10px 15px;">
+                    <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
+                </button>
+            </div>
+
+            <p class="mb-2">Monitoring for sudden movements. Shake camera or fall to test.</p>
+
+            <div id="camContainer">
+                <video id="webcam" autoplay playsinline muted></video>
+                <div class="overlay">
+                    <i class="fas fa-circle-notch fa-spin"></i> Active Monitoring
+                </div>
+            </div>
+
+            <div class="monitor-bar">
+                <div class="monitor-val" id="motionLevel"></div>
+            </div>
+            <small style="color:grey; display:block; margin-top:5px;">Motion Sensitivity</small>
+
+            <canvas id="motionCanvas"></canvas>
+
+            <!-- Manual Demo Trigger -->
+            <button onclick="simulateFall()" class="alert" style="margin-top: 20px;">
+                <i class="fas fa-exclamation-triangle"></i> Simulate Fall
+            </button>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="fallModal"
+        style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,0,0,0.9); z-index: 999; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center;">
+        <i class="fas fa-person-falling" style="font-size: 5rem; margin-bottom: 20px;"></i>
+        <h1 data-i18n="fall_detected">FALL DETECTED!</h1>
+        <p style="font-size: 1.5rem;">Calling Emergency Contact in <span id="countdown">10</span>s</p>
+
+        <button onclick="cancelFall()"
+            style="background: white; color: red; width: auto; padding: 20px 40px; font-size: 1.5rem; margin-top: 30px;">
+            I AM OKAY
+        </button>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script>
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('motionCanvas');
+        const ctx = canvas.getContext('2d');
+        const motionBar = document.getElementById('motionLevel');
+        let isMonitoring = false;
+        let lastImageData = null;
+        let countdownTimer = null;
+        let count = 10;
+        let fallTriggered = false;
+
+        // Start Camera
+        navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } })
+            .then(stream => {
+                video.srcObject = stream;
+                video.addEventListener('loadeddata', startMonitoring);
+            })
+            .catch(err => console.error("Camera denied", err));
+
+        function startMonitoring() {
+            canvas.width = 100; // Low res for performance
+            canvas.height = 75;
+            isMonitoring = true;
+            loop();
+        }
+
+        function loop() {
+            if (!isMonitoring || fallTriggered) return;
+
+            // Draw current frame small
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            if (lastImageData) {
+                const motionScore = calculateMotion(lastImageData, imageData);
+                updateUI(motionScore);
+
+                // Fall Threshold (Simulated by high value)
+                if (motionScore > 40) { // Arbitrary threshold
+                    triggerFallSequence();
+                }
+            }
+
+            lastImageData = imageData;
+            requestAnimationFrame(loop);
+        }
+
+        function calculateMotion(img1, img2) {
+            let score = 0;
+            const data1 = img1.data;
+            const data2 = img2.data;
+            // Iterate steps to save CPU
+            for (let i = 0; i < data1.length; i += 16) {
+                const diff = Math.abs(data1[i] - data2[i]); // Check R channel diff
+                if (diff > 30) score++;
+            }
+            // Normalize roughly
+            return Math.min(100, (score / (data1.length / 16)) * 100);
+        }
+
+        function updateUI(score) {
+            motionBar.style.width = score + '%';
+            if (score > 30) {
+                motionBar.style.backgroundColor = 'red';
+            } else {
+                motionBar.style.backgroundColor = 'var(--success-color)';
+            }
+        }
+
+        function triggerFallSequence() {
+            if (fallTriggered) return;
+            fallTriggered = true;
+            simulateFall(); // Re-use UI logic
+        }
+
+        function simulateFall() {
+            fallTriggered = true;
+            document.getElementById('fallModal').style.display = 'flex';
+
+            // Speak alert
+            speak(TRANSLATIONS[getSettings().lang || 'en']['fall_detected']);
+
+            count = 10;
+            updateCount();
+
+            if (countdownTimer) clearInterval(countdownTimer);
+            countdownTimer = setInterval(() => {
+                count--;
+                updateCount();
+                if (count <= 0) {
+                    confirmFall();
+                }
+            }, 1000);
+        }
+
+        function updateCount() {
+            document.getElementById('countdown').innerText = count;
+        }
+
+        function cancelFall() {
+            clearInterval(countdownTimer);
+            document.getElementById('fallModal').style.display = 'none';
+            // Cooldown before monitoring again
+            setTimeout(() => {
+                fallTriggered = false;
+                lastImageData = null;
+                loop();
+            }, 2000);
+        }
+
+        function confirmFall() {
+            clearInterval(countdownTimer);
+            // Redirect to SOS page with auto trigger
+            window.location.href = 'sos.html?auto=true';
+        }
+    </script>
+</body>
+
+</html>
