@@ -73,24 +73,76 @@
         const loadingMsg = document.getElementById('loadingMsg');
         const startBtn = document.getElementById('startBtn');
 
-        // Load Model
-        cocoSsd.load().then(loadedModel => {
-            model = loadedModel;
-            loadingMsg.classList.add('hidden');
-            startBtn.classList.remove('hidden');
-        });
+        // Check for Secure Context
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+            console.warn("Camera and AI features might be restricted on non-secure (HTTP) origins.");
+        }
+
+        // Load Model with Timeout and Error Handling
+        async function loadAIModel() {
+            loadingMsg.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading AI Model... Please wait.';
+            loadingMsg.classList.remove('hidden');
+            startBtn.classList.add('hidden');
+
+            try {
+                // Wait for COCO-SSD to be available if script is still loading
+                if (typeof cocoSsd === 'undefined') {
+                    console.log("Waiting for cocoSsd script...");
+                    let retries = 0;
+                    while (typeof cocoSsd === 'undefined' && retries < 10) {
+                        await new Promise(r => setTimeout(r, 500));
+                        retries++;
+                    }
+                }
+
+                if (typeof cocoSsd === 'undefined') {
+                    throw new Error("COCO-SSD script could not be loaded from CDN.");
+                }
+
+                console.log("Starting model load...");
+                model = await cocoSsd.load();
+                console.log("Model loaded successfully.");
+
+                loadingMsg.classList.add('hidden');
+                startBtn.classList.remove('hidden');
+            } catch (err) {
+                console.error("Model Load Error:", err);
+                loadingMsg.innerHTML = `
+                    <div style="color: var(--error-color); font-weight: bold;">
+                        <i class="fas fa-exclamation-triangle"></i> Failed to load AI model.
+                    </div>
+                    <div style="font-size: 0.9rem; color: #666; margin-top: 10px;">
+                        This usually happens due to slow internet or browser restrictions.
+                    </div>
+                    <button onclick="loadAIModel()" class="secondary" style="margin-top: 15px; width: auto; padding: 8px 20px;">
+                        <i class="fas fa-sync"></i> Retry Loading
+                    </button>
+                `;
+            }
+        }
+
+        // Initial Load
+        loadAIModel();
 
         function enableCam() {
             if (!model) return;
 
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert("Your browser does not support camera access or is blocking it.");
+                return;
+            }
+
             navigator.mediaDevices.getUserMedia({
-                video: { width: 640, height: 480 },
+                video: { width: 640, height: 480, facingMode: 'environment' },
                 audio: false
             }).then(stream => {
                 video.srcObject = stream;
                 video.addEventListener('loadeddata', predictWebcam);
                 document.getElementById('camContainer').classList.remove('hidden');
                 startBtn.classList.add('hidden');
+            }).catch(err => {
+                console.error("Camera Error:", err);
+                alert("Could not access camera: " + err.message);
             });
         }
 

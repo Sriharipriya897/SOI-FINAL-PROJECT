@@ -117,7 +117,14 @@
                     style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px;">
             </div>
 
-            <button onclick="saveAndApply()" data-i18n="save">Save Settings</button>
+            <div class="mb-2" style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="saveAndApply()" style="flex: 2;" data-i18n="save">Save Settings</button>
+                <button onclick="testSosEmail()" class="secondary" style="flex: 1;">
+                    <i class="fas fa-paper-plane"></i> Test Alert
+                </button>
+            </div>
+            <div id="testEmailStatus"
+                style="margin-top: 10px; font-weight: bold; font-size: 0.9rem; text-align: center;"></div>
 
             <button onclick="deleteEmailConfig()" class="alert" style="margin-top: 15px; background-color: #d64545;">
                 <i class="fas fa-trash"></i> <span data-i18n="delete_email">Delete Email Data</span>
@@ -261,6 +268,58 @@
             setTimeout(() => {
                 deleteBtn.innerHTML = originalText;
             }, 2000);
+        }
+
+        async function testSosEmail() {
+            const statusDiv = document.getElementById('testEmailStatus');
+            const config = {
+                emergencyEmail: document.getElementById('emergencyEmail').value.trim(),
+                serviceId: document.getElementById('emailjsServiceId').value.trim(),
+                templateId: document.getElementById('emailjsTemplateId').value.trim(),
+                publicKey: document.getElementById('emailjsPublicKey').value.trim()
+            };
+
+            if (!config.emergencyEmail || !config.serviceId || !config.templateId || !config.publicKey) {
+                statusDiv.style.color = 'var(--error-color)';
+                statusDiv.innerText = 'Please fill all fields before testing.';
+                return;
+            }
+
+            statusDiv.style.color = 'orange';
+            statusDiv.innerText = 'Sending test email...';
+
+            try {
+                // Load EmailJS SDK dynamically if not present
+                if (typeof emailjs === 'undefined') {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                }
+
+                emailjs.init(config.publicKey);
+                const response = await emailjs.send(
+                    config.serviceId,
+                    config.templateId,
+                    {
+                        to_email: config.emergencyEmail,
+                        user_name: 'System Tester',
+                        emergency_message: 'This is a test notification from Elder Care Companion. If you see this, your EmailJS setup is working correctly.',
+                        timestamp: new Date().toLocaleString(),
+                        location: 'Test Location (Sample)'
+                    }
+                );
+
+                statusDiv.style.color = 'green';
+                statusDiv.innerText = '✓ Test email sent successfully!';
+            } catch (error) {
+                console.error('Test Email failed:', error);
+                statusDiv.style.color = 'var(--error-color)';
+                statusDiv.innerText = '✗ Failed: ' + (error.text || error.message || 'Unknown error');
+            }
         }
     </script>
 </body>

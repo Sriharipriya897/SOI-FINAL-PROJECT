@@ -265,7 +265,10 @@
 
             const userName = profile.name || 'Elderly User';
             const contactPhone = profile.contactPhone || '';
+            const emergencyEmail = emailConfig.emergencyEmail || '';
             const time = new Date().toLocaleString();
+
+            const statusMsg = document.getElementById('statusMsg');
 
             // Get user location if available
             let location = 'Location unavailable';
@@ -282,9 +285,13 @@
 
             const message = `🚨 SOS EMERGENCY!\n\nUser: ${userName}\nNeeds immediate help!\n\nTime: ${time}\nLocation: ${location}\n\nPlease contact them immediately.`;
 
+            let emailSuccess = false;
+
             // 1. Send Email via EmailJS (if configured)
-            if (emailConfig.serviceId && emailConfig.templateId && emailConfig.publicKey && emailConfig.emergencyEmail) {
+            if (emailConfig.serviceId && emailConfig.templateId && emailConfig.publicKey && emergencyEmail) {
                 try {
+                    statusMsg.innerHTML = '<div>Sending Email Alert...</div>';
+
                     // Initialize EmailJS
                     emailjs.init(emailConfig.publicKey);
 
@@ -293,7 +300,7 @@
                         emailConfig.serviceId,
                         emailConfig.templateId,
                         {
-                            to_email: emailConfig.emergencyEmail,
+                            to_email: emergencyEmail,
                             user_name: userName,
                             emergency_message: message,
                             timestamp: time,
@@ -302,10 +309,11 @@
                     );
 
                     console.log('Email sent successfully!', response);
+                    emailSuccess = true;
 
                     // Update status message
-                    document.getElementById('statusMsg').innerHTML = `
-                        <div style="color: green;">✓ Email sent successfully to ${emailConfig.emergencyEmail}!</div>
+                    statusMsg.innerHTML = `
+                        <div style="color: green; font-weight: bold;">✓ Email alert sent to ${emergencyEmail}!</div>
                         <div style="font-size: 1rem; color: black; margin-top: 10px;">Opening WhatsApp as backup...</div>
                     `;
 
@@ -313,22 +321,29 @@
                     console.error('EmailJS Error:', error);
 
                     // Show error but continue with fallback
-                    document.getElementById('statusMsg').innerHTML = `
-                        <div style="color: orange;">⚠ Email failed. Check settings.</div>
-                        <div style="font-size: 1rem; color: black; margin-top: 10px;">Opening WhatsApp and mailto as backup...</div>
+                    statusMsg.innerHTML = `
+                        <div style="color: #d64545; font-weight: bold;">⚠ Automatic email failed.</div>
+                        <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">Error: ${error.text || error.message || 'Unknown error'}</div>
+                        <div style="font-size: 1rem; color: black; margin-top: 10px;">Opening manual email and WhatsApp...</div>
                     `;
 
                     // Fallback to mailto
                     const encodedMsg = encodeURIComponent(message);
-                    const mailLink = `mailto:${emailConfig.emergencyEmail || ''}?subject=SOS Alert - ${userName}&body=${encodedMsg}`;
-                    setTimeout(() => window.location.href = mailLink, 2000);
+                    const mailLink = `mailto:${emergencyEmail}?subject=SOS Alert - ${userName}&body=${encodedMsg}`;
+                    setTimeout(() => window.location.href = mailLink, 3000);
                 }
             } else {
-                // No EmailJS configured - use fallback methods
-                console.log('EmailJS not configured. Using fallback methods.');
+                // No EmailJS configured or missing emergency email
+                console.log('EmailJS not fully configured.');
+
+                statusMsg.innerHTML = `
+                    <div style="color: orange; font-weight: bold;">⚠ Alert system not fully configured.</div>
+                    <div style="font-size: 1rem; color: black; margin-top: 10px;">Opening manual email and WhatsApp...</div>
+                `;
+
                 const encodedMsg = encodeURIComponent(message);
-                const mailLink = `mailto:?subject=SOS Alert - ${userName}&body=${encodedMsg}`;
-                setTimeout(() => window.location.href = mailLink, 1500);
+                const mailLink = `mailto:${emergencyEmail}?subject=SOS Alert - ${userName}&body=${encodedMsg}`;
+                setTimeout(() => window.location.href = mailLink, 2000);
             }
 
             // 2. WhatsApp Web Link (always send as backup)
