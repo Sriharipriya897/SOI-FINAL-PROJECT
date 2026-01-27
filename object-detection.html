@@ -8,9 +8,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-    <!-- TensorFlow.js -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <!-- TensorFlow.js will be loaded dynamically -->
 
     <style>
         #camContainer {
@@ -49,7 +47,9 @@
 
             <p class="mb-2">Point camera at objects to identify them.</p>
 
-            <div id="loadingMsg">Loading AI Model... Please wait.</div>
+            <div id="loadingMsg">
+                <i class="fas fa-spinner fa-spin"></i> Initializing AI Engine...
+            </div>
 
             <div id="camContainer" class="hidden">
                 <video id="webcam" autoplay playsinline muted></video>
@@ -78,44 +78,106 @@
             console.warn("Camera and AI features might be restricted on non-secure (HTTP) origins.");
         }
 
-        // Load Model with Timeout and Error Handling
+        function updateStatus(msg, type = 'info') {
+            if (type === 'error') {
+                loadingMsg.innerHTML = `
+                    <div style="color: var(--error-color); font-weight: bold;">
+                        <i class="fas fa-exclamation-triangle"></i> ${msg}
+                    </div>
+                    <div style="font-size: 0.9rem; color: #666; margin-top: 10px;">
+                        Check your internet connection.
+                    </div>
+                    <button onclick="location.reload()" class="secondary" style="margin-top: 15px; width: auto; padding: 8px 20px;">
+                        <i class="fas fa-sync"></i> Retry
+                    </button>
+                `;
+            } else {
+                loadingMsg.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${msg}`;
+            }
+        }
+
+        // Helper to load a script from a list of mirrors
+        async function loadScriptWithFallback(mirrors) {
+            for (const src of mirrors) {
+                try {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = src;
+                        script.onload = resolve;
+                        script.onerror = () => reject(new Error(`Failed to load ${src}`));
+                        document.head.appendChild(script);
+                    });
+                    console.log(`Loaded: ${src}`);
+                    return; // Success!
+                } catch (e) {
+                    console.warn(e.message, "Trying next mirror...");
+                    continue;
+                }
+            }
+            throw new Error("All mirrors failed for script.");
+        }
+
         async function loadAIModel() {
-            loadingMsg.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading AI Model... Please wait.';
-            loadingMsg.classList.remove('hidden');
+            updateStatus("Initializing AI Engine...");
             startBtn.classList.add('hidden');
 
             try {
-                // Wait for COCO-SSD to be available if script is still loading
-                if (typeof cocoSsd === 'undefined') {
-                    console.log("Waiting for cocoSsd script...");
-                    let retries = 0;
-                    while (typeof cocoSsd === 'undefined' && retries < 10) {
-                        await new Promise(r => setTimeout(r, 500));
-                        retries++;
-                    }
+                // 1. Load TensorFlow.js
+                if (typeof tf === 'undefined') {
+                    updateStatus("Downloading TensorFlow.js (60s timeout)...");
+                    await loadScriptWithFallback([
+                        "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js",
+                        "https://unpkg.com/@tensorflow/tfjs@3.18.0/dist/tf.min.js",
+                        "https://cdnjs.cloudflare.com/ajax/libs/tensorflow/3.18.0/tf.min.js"
+                    ]);
                 }
 
+                // 2. Initialize Backend
+                await tf.ready();
+
+                // 3. Load COCO-SSD
                 if (typeof cocoSsd === 'undefined') {
-                    throw new Error("COCO-SSD script could not be loaded from CDN.");
+                    updateStatus("Downloading Object Detection...");
+                    await loadScriptWithFallback([
+                        "https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js",
+                        "https://unpkg.com/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"
+                    ]);
                 }
 
-                console.log("Starting model load...");
-                model = await cocoSsd.load();
+                // 4. Load Model Weights
+                updateStatus("Loading Vision Model (approx 4MB)...");
+
+                // Add a longer timeout for the model weights (60s)
+                const modelLoadPromise = cocoSsd.load();
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error("Network timeout")), 60000)
+                );
+
+                model = await Promise.race([modelLoadPromise, timeoutPromise]);
                 console.log("Model loaded successfully.");
 
                 loadingMsg.classList.add('hidden');
                 startBtn.classList.remove('hidden');
+
             } catch (err) {
                 console.error("Model Load Error:", err);
+                let errorText = "Network too slow.";
+                if (err.message.includes("timeout")) errorText = "Connection timed out.";
+                if (err.message.includes("All mirrors failed")) errorText = "Unable to download AI components.";
+
                 loadingMsg.innerHTML = `
                     <div style="color: var(--error-color); font-weight: bold;">
-                        <i class="fas fa-exclamation-triangle"></i> Failed to load AI model.
+                        <i class="fas fa-wifi"></i> ${errorText}
                     </div>
                     <div style="font-size: 0.9rem; color: #666; margin-top: 10px;">
-                        This usually happens due to slow internet or browser restrictions.
+                        We couldn't reach the AI server. <br>
+                        Please check your internet connection.
                     </div>
                     <button onclick="loadAIModel()" class="secondary" style="margin-top: 15px; width: auto; padding: 8px 20px;">
-                        <i class="fas fa-sync"></i> Retry Loading
+                        <i class="fas fa-sync"></i> Use Backup Connection
+                    </button>
+                    <button onclick="window.location.reload()" class="secondary" style="margin-top: 5px; width: auto; font-size: 0.8rem; border:none; color: var(--primary-color);">
+                       Reload Page
                     </button>
                 `;
             }
@@ -132,12 +194,22 @@
                 return;
             }
 
-            navigator.mediaDevices.getUserMedia({
-                video: { width: 640, height: 480, facingMode: 'environment' },
+            const constraints = {
+                video: {
+                    facingMode: 'environment', // Prefer back camera
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                },
                 audio: false
-            }).then(stream => {
+            };
+
+            navigator.mediaDevices.getUserMedia(constraints).then(stream => {
                 video.srcObject = stream;
-                video.addEventListener('loadeddata', predictWebcam);
+                // Wait for video to actually play before predicting
+                video.onloadedmetadata = () => {
+                    video.play();
+                    predictWebcam();
+                };
                 document.getElementById('camContainer').classList.remove('hidden');
                 startBtn.classList.add('hidden');
             }).catch(err => {
@@ -147,8 +219,17 @@
         }
 
         function predictWebcam() {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            // Ensure video is ready
+            if (video.readyState < 2) {
+                requestAnimationFrame(predictWebcam);
+                return;
+            }
+
+            // Sync canvas size to video size
+            if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+            }
 
             model.detect(video).then(predictions => {
                 try {
