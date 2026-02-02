@@ -178,6 +178,11 @@
         function triggerFallSequence() {
             if (fallTriggered) return;
             fallTriggered = true;
+
+            // Store fall status for chatbot context
+            localStorage.setItem('elderFallStatus', 'detected');
+            localStorage.setItem('elderLastFallTime', new Date().toISOString());
+
             simulateFall(); // Re-use UI logic
         }
 
@@ -208,6 +213,11 @@
         function cancelFall() {
             clearInterval(countdownTimer);
             document.getElementById('fallModal').style.display = 'none';
+
+            // Clear fall status - user is okay
+            localStorage.setItem('elderFallStatus', 'not_detected');
+            localStorage.removeItem('elderLastFallTime');
+
             // Cooldown before monitoring again
             setTimeout(() => {
                 fallTriggered = false;

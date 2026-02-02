@@ -47,6 +47,11 @@
 
                     <button type="submit" data-i18n="save">Save Log</button>
 
+                    <button type="button" onclick="downloadReport()" class="secondary"
+                        style="margin-top: 15px; background-color: var(--secondary-color); color: white;">
+                        <i class="fas fa-file-pdf"></i> Download Health Report
+                    </button>
+
                     <button type="button" onclick="clearHealthHistory()" class="alert"
                         style="margin-top: 15px; background-color: #d64545;">
                         <i class="fas fa-trash"></i> <span data-i18n="delete_health">Delete Health Data</span>
@@ -306,6 +311,72 @@
             } else {
                 document.getElementById('healthStatus').classList.add('hidden');
             }
+        }
+
+        function downloadReport() {
+            const profile = JSON.parse(localStorage.getItem('elderProfile') || '{}');
+            const data = getHealthData();
+            const reminders = JSON.parse(localStorage.getItem('elderReminders') || '[]');
+            const appointments = JSON.parse(localStorage.getItem('elderAppointments') || '[]');
+            const falls = JSON.parse(localStorage.getItem('elderFalls') || '[]'); // Assuming falls are logged
+
+            let report = `ELDER CARE HEALTH REPORT\n`;
+            report += `========================\n\n`;
+            report += `GENERATED ON: ${new Date().toLocaleString()}\n\n`;
+
+            report += `1. PROFILE\n`;
+            report += `----------\n`;
+            report += `Name: ${profile.name || 'N/A'}\n`;
+            report += `Age: ${profile.age || 'N/A'}\n`;
+            report += `Conditions: ${profile.conditions || 'None'}\n\n`;
+
+            report += `2. VITALS SUMMARY (Last 5 Logs)\n`;
+            report += `------------------------------\n`;
+            if (data.length === 0) report += `No vitals logged.\n`;
+            else {
+                data.slice(-5).reverse().forEach(log => {
+                    report += `${log.date}: BP ${log.sys}/${log.dia} | Sugar: ${log.sugar || 'N/A'} | HR: ${log.hr || 'N/A'}\n`;
+                });
+            }
+            report += `\n`;
+
+            report += `3. MEDICINE ADHERENCE\n`;
+            report += `---------------------\n`;
+            if (reminders.length === 0) report += `No medicines scheduled.\n`;
+            else {
+                reminders.forEach(r => {
+                    report += `[ ] ${r.name} - ${r.time} (${r.dosage})\n`;
+                });
+            }
+            report += `\n`;
+
+            report += `4. APPOINTMENTS\n`;
+            report += `---------------\n`;
+            if (appointments.length === 0) report += `No appointments booked.\n`;
+            else {
+                appointments.forEach(a => {
+                    report += `${a.time}: ${a.hospital} (${a.status})\n`;
+                });
+            }
+            report += `\n`;
+
+            report += `5. RECENT ALERTS\n`;
+            report += `----------------\n`;
+            const notifications = JSON.parse(localStorage.getItem('elderNotifications') || '[]');
+            if (notifications.length === 0) report += `No alerts recorded.\n`;
+            else {
+                notifications.slice(0, 5).forEach(n => {
+                    report += `${new Date(n.time).toLocaleString()}: ${n.title} - ${n.message}\n`;
+                });
+            }
+
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Health_Report_${profile.name || 'User'}_${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            window.URL.revokeObjectURL(url);
         }
     </script>
 </body>

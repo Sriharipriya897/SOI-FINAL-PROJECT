@@ -211,6 +211,12 @@
             }
 
             isSOSActive = true;
+
+            // Store SOS status for chatbot context
+            localStorage.setItem('elderSOSActive', 'true');
+            localStorage.removeItem('elderSOSCancelled');
+            localStorage.setItem('elderLastSOSTime', new Date().toISOString());
+
             document.body.classList.add('alert-active');
 
             const btn = document.getElementById('sosBtn');
@@ -244,6 +250,11 @@
 
         function stopSOS() {
             isSOSActive = false;
+
+            // Update SOS status for chatbot context
+            localStorage.setItem('elderSOSActive', 'false');
+            localStorage.setItem('elderSOSCancelled', 'true');
+
             document.body.classList.remove('alert-active');
 
             const btn = document.getElementById('sosBtn');
@@ -257,6 +268,11 @@
 
             // Allow re-trigger if needed, but remove query param to avoid loop on refresh
             window.history.replaceState({}, document.title, window.location.pathname);
+
+            // Clear cancelled status after 5 minutes
+            setTimeout(() => {
+                localStorage.removeItem('elderSOSCancelled');
+            }, 300000);
         }
 
         async function sendAlerts() {

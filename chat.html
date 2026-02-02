@@ -140,12 +140,12 @@
                     </button>
                 </div>
             </div>
-
         </div>
     </div>
 
     <script src="js/utils.js"></script>
     <script src="js/config.js"></script>
+    <script src="js/chatbot-engine.js"></script>
     <script>
         const chatMessages = document.getElementById('chatMessages');
         const chatInput = document.getElementById('chatInput');
@@ -159,20 +159,79 @@
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Welcome Message
+            // Update last activity
+            updateLastActivity();
+
+            // 1. Check for Emergency/Context first
+            const immediateAlerts = elderCareChatbot.checkForProactiveAlerts();
             const lang = getSettings().lang || 'en';
-            const welcome = lang === 'ta' ? "வணக்கம்! நான் உங்கள் உதவியாளர். என்னிடம் எதையும் கேளுங்கள்." : "Hello! I am your AI companion. Ask me anything.";
-            addMessage(welcome, 'bot');
-            speak(welcome);
+            const profile = elderCareChatbot.getUserProfile();
+            const timeOfDay = elderCareChatbot.getTimeOfDay();
+
+            if (immediateAlerts.length > 0) {
+                // If there's a critical alert (Fall/SOS), prioritze it as the "greeting"
+                const critical = immediateAlerts.find(a => a.type === 'fall' || a.type === 'sos') || immediateAlerts[0];
+                addMessage(critical.message, 'bot');
+                speak(critical.message);
+            } else {
+                // Standard personalized greeting
+                let greeting = '';
+                if (lang === 'ta') {
+                    const tamilGreeting = timeOfDay === 'morning' ? 'காலை வணக்கம்' :
+                        timeOfDay === 'afternoon' ? 'மதிய வணக்கம்' :
+                            timeOfDay === 'evening' ? 'மாலை வணக்கம்' : 'இரவு வணக்கம்';
+                    greeting = `${tamilGreeting}, ${profile.name}! நான் உங்கள் பராம்ரிப்பு உதவியாளர். நான் உங்களுக்கு எப்படி உதவ முடியும்?`;
+                } else {
+                    const engGreeting = timeOfDay === 'morning' ? 'Good morning' :
+                        timeOfDay === 'afternoon' ? 'Good afternoon' :
+                            timeOfDay === 'evening' ? 'Good evening' : 'Good evening';
+                    greeting = `${engGreeting}, ${profile.name}! I am your care companion. How can I help you today?`;
+                }
+                addMessage(greeting, 'bot');
+                speak(greeting);
+            }
+
+            // 2. Set up periodic check (every 30 seconds for faster response)
+            setInterval(checkProactiveAlerts, 30000);
+
+            // Respond immediately when system context changes in other pages
+            let storageTimeout = null;
+            window.addEventListener('storage', (e) => {
+                const keysToWatch = ['elderFallStatus', 'elderDetectedObjects', 'elderSOSActive', 'elderReminders', 'elderAppointments'];
+                if (keysToWatch.includes(e.key)) {
+                    // Debounce to prevent rapid fire triggers
+                    clearTimeout(storageTimeout);
+                    storageTimeout = setTimeout(() => {
+                        checkProactiveAlerts();
+                    }, 1000); // 1 second buffer
+                }
+            });
         });
+
+        function updateLastActivity() {
+            localStorage.setItem('elderLastActivity', new Date().toISOString());
+        }
+
+        function checkProactiveAlerts() {
+            // New system passes the generated message to the callback
+            elderCareChatbot.checkForProactiveAlerts((message) => {
+                addMessage(message, 'bot');
+                speak(message);
+            });
+        }
 
         chatInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
 
+        // Update activity on user interaction
+        chatInput.addEventListener('input', updateLastActivity);
+
         async function sendMessage() {
             const text = chatInput.value.trim();
             if (!text) return;
+
+            updateLastActivity();
 
             // 1. User Message
             addMessage(text, 'user');
@@ -181,9 +240,9 @@
             // 2. Loading Indicator
             const loadingId = addMessage("Thinking...", 'bot', true);
 
-            // 3. Get AI Response
+            // 3. Get AI Response with Context
             try {
-                const response = await getAIResponse(text);
+                const response = await getAIResponseWithContext(text);
 
                 // Remove loading and show actual response
                 removeMessage(loadingId);
@@ -218,7 +277,7 @@
             }
         }
 
-        async function getAIResponse(userParam) {
+        async function getAIResponseWithContext(userMessage) {
             const apiKey = CONFIG.getApiKey();
             const settings = getSettings();
             const lang = settings.lang || 'en';
@@ -229,39 +288,12 @@
                     : "Please set your Google Gemini API Key in Settings to enable intelligence.";
             }
 
-            const systemPrompt = lang === 'ta'
-                ? "நீங்கள் ஒரு வயதானவர்களுக்கான உதவியாளர். கேள்விகளுக்கு மரியாதையாகவும், சுருக்கமாகவும் (2-3 வரிகளில்) தமிழில் பதில் அளிக்கவும். மருத்துவ கேள்விகளுக்கு பதில் அளித்துவிட்டு மருத்துவரை அணுகுமாறு அறிவுறுத்தவும்."
-                : "You are a compassionate companion for an elderly person. Answer strictly in English. be concise (max 2-3 sentences). If asking for medical advice, give a general helpful answer but ALWAYS advise seeing a doctor.";
-
-            // Use the dynamically discovered model or fallback
-            const model = CONFIG.getModel ? CONFIG.getModel() : 'gemini-1.5-flash';
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
+            // Use the intelligent chatbot engine
             try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: `${systemPrompt}\n\nUser: ${userParam}\nAssistant:`
-                            }]
-                        }]
-                    })
-                });
-
-                if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.error?.message || 'API Error');
-                }
-
-                const data = await response.json();
-                if (!data.candidates || data.candidates.length === 0) {
-                    throw new Error('No response from AI');
-                }
-                return data.candidates[0].content.parts[0].text;
+                const response = await elderCareChatbot.generateResponse(userMessage, apiKey, lang);
+                return response;
             } catch (err) {
-                console.error(err);
+                console.error('Chatbot Engine Error:', err);
                 throw err;
             }
         }
@@ -284,6 +316,7 @@
         function toggleMic() {
             if (isListening) return;
 
+            updateLastActivity();
             micBtn.classList.add('listening');
             isListening = true;
 

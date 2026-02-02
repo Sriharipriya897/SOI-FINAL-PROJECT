@@ -59,6 +59,12 @@
             <button id="startBtn" onclick="enableCam()" class="hidden" style="margin-top:20px;">
                 <i class="fas fa-camera"></i> Start Camera
             </button>
+
+            <div id="aiStatus" class="hidden"
+                style="margin-top: 15px; padding: 10px; border-radius: 8px; background: #f8f9fa; border-left: 4px solid #667eea; font-size: 0.9rem;">
+                <i class="fas fa-brain" style="color: #667eea;"></i> <strong>AI Status:</strong> <span
+                    id="statusText">Active & Monitoring</span>
+            </div>
         </div>
     </div>
 
@@ -140,15 +146,17 @@
                     updateStatus("Downloading Object Detection...");
                     await loadScriptWithFallback([
                         "https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js",
-                        "https://unpkg.com/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"
+                        "https://unpkg.com/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js",
+                        "https://cdnjs.cloudflare.com/ajax/libs/tensorflow-models/coco-ssd/2.2.2/coco-ssd.min.js"
                     ]);
                 }
 
                 // 4. Load Model Weights
-                updateStatus("Loading Vision Model (approx 4MB)...");
+                updateStatus("Loading Vision Model (Lite version)...");
 
                 // Add a longer timeout for the model weights (60s)
-                const modelLoadPromise = cocoSsd.load();
+                // Use lite_mobilenet_v2 for faster loading on mobile devices
+                const modelLoadPromise = cocoSsd.load({ base: 'lite_mobilenet_v2' });
                 const timeoutPromise = new Promise((_, reject) =>
                     setTimeout(() => reject(new Error("Network timeout")), 60000)
                 );
@@ -211,6 +219,7 @@
                     predictWebcam();
                 };
                 document.getElementById('camContainer').classList.remove('hidden');
+                document.getElementById('aiStatus').classList.remove('hidden');
                 startBtn.classList.add('hidden');
             }).catch(err => {
                 console.error("Camera Error:", err);
@@ -241,6 +250,8 @@
             });
         }
 
+        let lastDetectedObjectHash = "";
+
         function renderPredictions(predictions) {
             ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
@@ -250,6 +261,9 @@
 
             const settings = getSettings();
             const lang = settings.lang || 'en';
+
+            // Store detected objects for chatbot context
+            const detectedObjectNames = [];
 
             predictions.forEach(prediction => {
                 const x = prediction.bbox[0];
@@ -268,6 +282,9 @@
                     label = COCO_TRANSLATIONS[label];
                 }
 
+                // Store original English name for chatbot
+                detectedObjectNames.push(prediction.class);
+
                 // Draw Background
                 ctx.fillStyle = '#00FFFF';
                 const textWidth = ctx.measureText(label).width;
@@ -280,6 +297,27 @@
                 // Speak
                 debounceSpeak(label, lang);
             });
+
+            // Save to localStorage ONLY if detection changed (throttle)
+            const uniqueObjects = [...new Set(detectedObjectNames)].sort();
+            const objectHash = uniqueObjects.join(',');
+
+            if (objectHash !== lastDetectedObjectHash) {
+                lastDetectedObjectHash = objectHash;
+
+                if (uniqueObjects.length > 0) {
+                    localStorage.setItem('elderDetectedObjects', JSON.stringify(uniqueObjects));
+                    localStorage.setItem('elderLastDetectionTime', new Date().toISOString());
+
+                    // Also save to recent history (persists longer)
+                    localStorage.setItem('elderRecentObjects', JSON.stringify(uniqueObjects));
+                    localStorage.setItem('elderRecentTime', new Date().toISOString());
+                    console.log('✅ Detection stored:', uniqueObjects);
+                } else {
+                    localStorage.removeItem('elderDetectedObjects');
+                    console.log('⚪ Detection cleared');
+                }
+            }
         }
 
         function debounceSpeak(label, lang) {
