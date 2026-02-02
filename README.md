@@ -32,14 +32,17 @@ All processing is done locally in the browser, making the system privacy-friendl
 
 ## ✨ Key Features
 
+### 🏥 **NEW: Hospital & Healthcare Integration**
+- **KG Hospital Module** - Dedicated interface for managing appointments at KG Hospital.
+- **Nurse Portal** - Secure entrance for healthcare providers to sync authoritative prescriptions and vitals.
+- **Medicine Sync** - Instant synchronization between Nurse Portal and Elder Reminders.
+- **Health Report Generation** - Downloadable PDF-style text reports for medical review.
+
 ### 🤖 **NEW: Intelligent Context-Aware Chatbot**
-- **Real-time context gathering** from all app modules (objects, falls, SOS, medicines)
-- **Personalized responses** based on user profile, time of day, and current situation
-- **Proactive monitoring** - automatically reminds about medicines, checks on falls, monitors inactivity
-- **Safety-first design** - never provides medical diagnosis, always recommends seeing a doctor
-- **Elderly-friendly communication** - calm tone, simple language, maximum 2-3 sentence responses
-- **Bilingual support** - Full conversational support in English and Tamil (தமிழ்)
-- **Context-aware warnings** - Alerts about detected objects and obstacles
+- **Real-time context gathering** from all app modules (objects, falls, SOS, medicines, appointments)
+- **ChatGPT-level Intelligence** - Reason across multiple systems (e.g., reminding about meds while checking fall safety)
+- **Permanent Companion Mode** - Strictly for elder safety; suppresses technical errors and API failures.
+- **Voice-First Navigation** - Voice command support for opening pages and booking appointments.
 
 ### 🚨 Safety & Monitoring
 - **Camera-based Fall Detection** - Logic-based motion analysis (no ML training required)
@@ -126,6 +129,8 @@ All processing is done locally in the browser, making the system privacy-friendl
 .
 ├── index.html                    # Login page
 ├── dashboard.html                # Main dashboard
+├── hospital.html                 # 🆕 KG Hospital appointments
+├── nurse-portal.html             # 🆕 Healthcare provider interface
 ├── chat.html                     # Intelligent chatbot interface
 ├── chatbot-demo.html            # Interactive demo for testing
 ├── fall-detection.html          # Fall detection with camera
