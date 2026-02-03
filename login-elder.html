@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elder Login - Elder Care Companion</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <h1 data-i18n="app_title" class="mb-2">Elder Care Companion</h1>
+            <div id="login-container">
+                <h2 class="mb-1">Elder Login</h2>
+                <form id="loginForm">
+                    <input type="hidden" id="defaultRole" value="elder">
+                    <input type="text" id="username" data-i18n-placeholder="username" placeholder="Username" required
+                        autocomplete="username">
+                    <input type="password" id="password" data-i18n-placeholder="password" placeholder="Password"
+                        required autocomplete="current-password">
+                    <button type="submit">Login</button>
+                    <p style="margin-top: 1rem; font-size: 0.9rem;">
+                        New User? <a href="#" id="showRegister" style="color: var(--primary-color);">Register here</a>
+                </form>
+            </div>
+            <div id="register-container" style="display: none;">
+                <h2 class="mb-1">Register</h2>
+                <form id="registerForm">
+                    <input type="text" id="reg-username" placeholder="Choose Username" required autocomplete="username">
+                    <input type="password" id="reg-password" placeholder="Choose Password" required
+                        autocomplete="new-password">
+                    <button type="submit">Register</button>
+                    <p style="margin-top: 1rem; font-size: 0.9rem;">
+                        Already have an account? <a href="#" id="showLogin" style="color: var(--primary-color);">Login
+                            here</a>
+                    </p>
+                </form>
+            </div>
+
+        </div>
+    </div>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        const langSelect = document.getElementById('langSelect');
+        const currentSettings = getSettings();
+        langSelect.value = currentSettings.lang;
+        langSelect.addEventListener('change', (e) => {
+            const s = getSettings();
+            s.lang = e.target.value;
+            saveSettings(s);
+        });
+    </script>
+</body>
+
+</html>

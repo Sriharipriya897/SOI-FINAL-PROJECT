@@ -8,107 +8,247 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .chat-container {
+        .page-layout {
+            display: flex;
+            height: 90vh;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            gap: 20px;
+        }
+
+        /* Sidebar Styling */
+        .chat-sidebar {
+            width: 280px;
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
             display: flex;
             flex-direction: column;
-            height: 60vh;
-            border: 2px solid #eee;
-            border-radius: 12px;
             overflow: hidden;
-            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .new-chat-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            width: 100%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-weight: 500;
+            transition: background 0.2s;
+            margin-top: 0;
+        }
+
+        .new-chat-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .sessions-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .session-item {
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+            color: var(--text-color);
+            position: relative;
+        }
+
+        .session-item:hover {
+            background: #f0f4ff;
+        }
+
+        .session-item.active {
+            background: #ebf4ff;
+            color: var(--primary-color);
+            font-weight: 500;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .session-title {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 0.9rem;
+        }
+
+        .delete-session {
+            opacity: 0;
+            color: var(--text-muted);
+            padding: 5px;
+            transition: all 0.2s;
+        }
+
+        .session-item:hover .delete-session {
+            opacity: 1;
+        }
+
+        .delete-session:hover {
+            color: var(--error-color);
+        }
+
+        /* Chat Area Styling */
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         .chat-messages {
             flex: 1;
             padding: 20px;
             overflow-y: auto;
-            background: #f9f9f9;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
         }
 
         .message {
             margin-bottom: 15px;
-            padding: 10px 15px;
+            padding: 12px 18px;
             border-radius: 12px;
             max-width: 80%;
             word-wrap: break-word;
+            line-height: 1.5;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .message.bot {
-            background: var(--primary-color);
-            color: white;
+            background: var(--card-bg);
+            color: var(--text-color);
             align-self: flex-start;
             border-top-left-radius: 0;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
 
         .message.user {
-            background: var(--accent-color);
+            background: var(--primary-color);
             color: white;
             align-self: flex-end;
-            margin-left: auto;
             border-top-right-radius: 0;
+            box-shadow: 0 4px 10px rgba(76, 110, 245, 0.2);
         }
 
         .chat-input-area {
-            padding: 10px;
-            background: #fff;
-            border-top: 1px solid #eee;
+            padding: 15px 20px;
+            background: var(--card-bg);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
             display: flex;
-            gap: 10px;
+            gap: 12px;
             align-items: center;
-        }
-
-        #chatInput {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 20px;
-            font-size: 1rem;
         }
 
         .icon-btn {
             width: 50px;
             height: 50px;
             border-radius: 50%;
-            border: none;
-            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
-            color: white;
-            transition: transform 0.2s;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
             margin: 0;
-            /* Override global button margin */
         }
 
-        .icon-btn.mic {
-            background: var(--secondary-color);
+        #chatInput {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid var(--secondary-color);
+            border-radius: 25px;
+            font-size: 1rem;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            transition: all 0.2s;
         }
 
-        .icon-btn.send {
-            background: var(--primary-color);
+        #chatInput:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(76, 110, 245, 0.1);
         }
 
-        .icon-btn:active {
-            transform: scale(0.95);
+        /* Mobile Sidebar Toggle */
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            left: 20px;
+            z-index: 1000;
+            background: var(--card-bg);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
-        .listening {
-            animation: pulse-red 1.5s infinite;
-            background: var(--error-color) !important;
-        }
-
-        @keyframes pulse-red {
-            0% {
-                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+        @media (max-width: 900px) {
+            .chat-sidebar {
+                position: fixed;
+                left: -280px;
+                top: 0;
+                height: 100vh;
+                z-index: 1001;
             }
 
-            70% {
-                box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+            .chat-sidebar.open {
+                left: 0;
             }
 
-            100% {
-                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+            .sidebar-toggle {
+                display: flex;
+            }
+
+            .page-layout {
+                height: 85vh;
             }
         }
     </style>
@@ -116,31 +256,63 @@
 
 <body>
 
-    <div class="container">
-        <div class="card" style="width: 100%; max-width: 800px; height: 85vh;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h2 data-i18n="chat">Companion Chat</h2>
-                <button onclick="window.location.href='dashboard.html'" class="secondary"
-                    style="width: auto; padding: 8px 15px; font-size: 1rem;">
-                    <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
-                </button>
+    <div class="container" style="padding: 20px; justify-content: flex-start;">
+        <div class="page-layout">
+            <!-- Sidebar -->
+            <div class="chat-sidebar" id="chatSidebar">
+                <div class="sidebar-header">
+                    <button class="new-chat-btn" onclick="startNewChat()">
+                        <i class="fas fa-plus"></i> New Chat
+                    </button>
+                </div>
+                <div class="sessions-list" id="sessionsList">
+                    <!-- Sessions go here -->
+                </div>
             </div>
 
-            <div class="chat-container">
-                <div class="chat-messages" id="chatMessages">
-                    <!-- Messages go here -->
+            <!-- Main Chat -->
+            <div class="chat-main">
+                <div
+                    style="padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-robot" style="color: var(--primary-color); font-size: 1.5rem;"></i>
+                        <h2 data-i18n="chat" style="margin: 0; font-size: 1.25rem;">Companion Chat</h2>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="clearChatBtn" onclick="clearChat()" class="secondary"
+                            style="width: auto; padding: 8px 15px; font-size: 0.9rem; border-color: var(--error-color); color: var(--error-color); display: none;">
+                            <i class="fas fa-trash-alt"></i> Clear
+                        </button>
+                        <button onclick="window.location.href='dashboard.html'" class="secondary"
+                            style="width: auto; padding: 8px 15px; font-size: 0.9rem;">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+                    </div>
                 </div>
-                <div class="chat-input-area">
-                    <button class="icon-btn mic" id="micBtn" onclick="toggleMic()">
-                        <i class="fas fa-microphone"></i>
-                    </button>
-                    <input type="text" id="chatInput" placeholder="Type or speak..." autocomplete="off">
-                    <button class="icon-btn send" onclick="sendMessage()">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
+
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <!-- Messages go here -->
+                    </div>
+                    <div class="chat-input-area">
+                        <button class="icon-btn mic" id="micBtn" onclick="toggleMic()"
+                            style="background: var(--secondary-color); color: white;">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <input type="text" id="chatInput" placeholder="Type or speak..." autocomplete="off">
+                        <button class="icon-btn send" onclick="sendMessage()"
+                            style="background: var(--primary-color); color: white;">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Mobile Toggle -->
+        <button class="icon-btn sidebar-toggle" onclick="toggleSidebar()" style="color: var(--primary-color);">
+            <i class="fas fa-history"></i>
+        </button>
     </div>
 
     <script src="js/utils.js"></script>
@@ -150,6 +322,8 @@
         const chatMessages = document.getElementById('chatMessages');
         const chatInput = document.getElementById('chatInput');
         const micBtn = document.getElementById('micBtn');
+        const sessionsList = document.getElementById('sessionsList');
+        const chatSidebar = document.getElementById('chatSidebar');
         let isListening = false;
 
         // Fallback for when API is not configured or offline
@@ -159,63 +333,120 @@
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Update last activity
+            const user = JSON.parse(localStorage.getItem('elderUser') || '{}');
             updateLastActivity();
 
-            // 1. Check for Emergency/Context first
-            const immediateAlerts = elderCareChatbot.checkForProactiveAlerts();
-            const lang = getSettings().lang || 'en';
-            const profile = elderCareChatbot.getUserProfile();
-            const timeOfDay = elderCareChatbot.getTimeOfDay();
+            // 1. Initial UI Setup
+            renderSessions();
+            loadActiveSession();
 
-            if (immediateAlerts.length > 0) {
-                // If there's a critical alert (Fall/SOS), prioritze it as the "greeting"
-                const critical = immediateAlerts.find(a => a.type === 'fall' || a.type === 'sos') || immediateAlerts[0];
-                addMessage(critical.message, 'bot');
-                speak(critical.message);
-            } else {
-                // Standard personalized greeting
-                let greeting = '';
-                if (lang === 'ta') {
-                    const tamilGreeting = timeOfDay === 'morning' ? 'காலை வணக்கம்' :
-                        timeOfDay === 'afternoon' ? 'மதிய வணக்கம்' :
-                            timeOfDay === 'evening' ? 'மாலை வணக்கம்' : 'இரவு வணக்கம்';
-                    greeting = `${tamilGreeting}, ${profile.name}! நான் உங்கள் பராம்ரிப்பு உதவியாளர். நான் உங்களுக்கு எப்படி உதவ முடியும்?`;
-                } else {
-                    const engGreeting = timeOfDay === 'morning' ? 'Good morning' :
-                        timeOfDay === 'afternoon' ? 'Good afternoon' :
-                            timeOfDay === 'evening' ? 'Good evening' : 'Good evening';
-                    greeting = `${engGreeting}, ${profile.name}! I am your care companion. How can I help you today?`;
-                }
-                addMessage(greeting, 'bot');
-                speak(greeting);
+            // 2. Setup Role-specific features
+            const role = elderCareChatbot.getRole();
+            if (role === 'caregiver' || role === 'hospital') {
+                const clearBtn = document.getElementById('clearChatBtn');
+                if (clearBtn) clearBtn.style.display = 'block';
             }
 
-            // 2. Set up periodic check (every 30 seconds for faster response)
+            // 3. Proactive Alerts Check
             setInterval(checkProactiveAlerts, 30000);
 
-            // Respond immediately when system context changes in other pages
-            let storageTimeout = null;
             window.addEventListener('storage', (e) => {
-                const keysToWatch = ['elderFallStatus', 'elderDetectedObjects', 'elderSOSActive', 'elderReminders', 'elderAppointments'];
+                const keysToWatch = ['elderFallStatus', 'elderDetectedObjects', 'elderSOSActive'];
                 if (keysToWatch.includes(e.key)) {
-                    // Debounce to prevent rapid fire triggers
-                    clearTimeout(storageTimeout);
-                    storageTimeout = setTimeout(() => {
-                        checkProactiveAlerts();
-                    }, 1000); // 1 second buffer
+                    checkProactiveAlerts();
                 }
             });
         });
 
-        function updateLastActivity() {
-            localStorage.setItem('elderLastActivity', new Date().toISOString());
+        function renderSessions() {
+            const sessions = elderCareChatbot.sessions;
+            sessionsList.innerHTML = '';
+
+            sessions.forEach(session => {
+                const item = document.createElement('div');
+                item.className = `session-item ${session.id === elderCareChatbot.activeSessionId ? 'active' : ''}`;
+                item.onclick = () => switchSession(session.id);
+
+                const title = document.createElement('span');
+                title.className = 'session-title';
+                title.innerText = session.title;
+
+                const deleteBtn = document.createElement('i');
+                deleteBtn.className = 'fas fa-trash delete-session';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    elderCareChatbot.deleteSession(session.id);
+                    renderSessions();
+                    loadActiveSession();
+                };
+
+                item.appendChild(title);
+                item.appendChild(deleteBtn);
+                sessionsList.appendChild(item);
+            });
+        }
+
+        function loadActiveSession() {
+            chatMessages.innerHTML = '';
+            const history = elderCareChatbot.conversationHistory;
+
+            if (history.length === 0) {
+                showGreeting();
+            } else {
+                history.forEach(item => {
+                    if (item.user) addMessage(item.user, 'user');
+                    if (item.bot) addMessage(item.bot, 'bot');
+                });
+            }
+            renderSessions(); // Update active class
+        }
+
+        function showGreeting() {
+            const profile = elderCareChatbot.getUserProfile();
+            const role = elderCareChatbot.getRole();
+            const lang = getSettings().lang || 'en';
+            const user = JSON.parse(localStorage.getItem('elderUser') || '{}');
+            const timeOfDay = elderCareChatbot.getTimeOfDay();
+
+            let greeting = '';
+            if (role === 'caregiver') {
+                greeting = `Hi ${user.username || 'Caregiver'}, would you like to know how your elder, ${profile.name}, is doing?`;
+            } else if (role === 'hospital') {
+                greeting = `Hi Doctor, how can I assist you with ${profile.name}'s data today?`;
+            } else if (lang === 'ta') {
+                const tamilGreeting = timeOfDay === 'morning' ? 'காலை வணக்கம்' :
+                    timeOfDay === 'afternoon' ? 'மதிய வணக்கம்' :
+                        timeOfDay === 'evening' ? 'மாலை வணக்கம்' : 'இரவு வணக்கம்';
+                greeting = `${tamilGreeting}, ${profile.name}! நான் உங்கள் பராமரிப்பு உதவியாளர். நான் உங்களுக்கு எப்படி உதவ முடியும்?`;
+            } else {
+                const engGreeting = timeOfDay === 'morning' ? 'Good morning' :
+                    timeOfDay === 'afternoon' ? 'Good afternoon' :
+                        timeOfDay === 'evening' ? 'Good evening' : 'Good evening';
+                greeting = `${engGreeting}, ${profile.name}! I am your care companion. How can I help you today?`;
+            }
+            addMessageAndSave(greeting, 'bot');
+            speak(greeting);
+        }
+
+        function startNewChat() {
+            elderCareChatbot.startNewSession();
+            loadActiveSession();
+            if (window.innerWidth <= 900) toggleSidebar();
+        }
+
+        function switchSession(id) {
+            elderCareChatbot.loadSession(id);
+            loadActiveSession();
+            if (window.innerWidth <= 900) toggleSidebar();
+        }
+
+        function toggleSidebar() {
+            chatSidebar.classList.toggle('open');
         }
 
         function checkProactiveAlerts() {
-            // New system passes the generated message to the callback
             elderCareChatbot.checkForProactiveAlerts((message) => {
-                addMessage(message, 'bot');
+                addMessageAndSave(message, 'bot');
                 speak(message);
             });
         }
@@ -224,77 +455,39 @@
             if (e.key === 'Enter') sendMessage();
         });
 
-        // Update activity on user interaction
-        chatInput.addEventListener('input', updateLastActivity);
-
         async function sendMessage() {
             const text = chatInput.value.trim();
             if (!text) return;
 
             updateLastActivity();
-
-            // 1. User Message
-            addMessage(text, 'user');
+            addMessageAndSave(text, 'user', false, true);
             chatInput.value = '';
 
-            // 2. Loading Indicator
-            const loadingId = addMessage("Thinking...", 'bot', true);
+            const lang = getSettings().lang || 'en';
+            const instantResponse = await elderCareChatbot.getInstantResponse(text, lang);
+            if (instantResponse) {
+                addMessageAndSave(instantResponse, 'bot');
+                speak(instantResponse);
+                renderSessions(); // In case title updated
+                return;
+            }
 
-            // 3. Get AI Response with Context
+            const loadingId = addMessage(lang === 'ta' ? "சிந்திக்கிறேன்..." : "Thinking...", 'bot', true);
+
             try {
-                const response = await getAIResponseWithContext(text);
+                const apiKey = CONFIG.getApiKey();
+                if (!apiKey) throw new Error("No API Key");
 
-                // Remove loading and show actual response
+                const response = await elderCareChatbot.generateResponse(text, apiKey, lang);
                 removeMessage(loadingId);
-                addMessage(response, 'bot');
+                addMessageAndSave(response, 'bot', false, true);
                 speak(response);
+                renderSessions(); // Update title
             } catch (error) {
                 removeMessage(loadingId);
-                const lang = getSettings().lang || 'en';
-
-                // Show specific error if it's an API Key or Quota issue
-                let displayMsg = FALLBACK_RESPONSES[lang];
-
-                // Debug mode: Show actual error to help diagnose
-                if (true) {
-                    displayMsg += `\n(Debug Error: ${error.message})`;
-                }
-
-                if (error.message.includes('API key') || error.message.includes('key')) {
-                    displayMsg = lang === 'ta'
-                        ? "API திறவுகோல் தவறாக உள்ளது. தயவுசெய்து அமைப்புகளில் சரிபார்க்கவும்."
-                        : "Error: Invalid API Key. Please check your Settings.";
-                } else if (error.message.includes('quota')) {
-                    displayMsg = "Error: API Quota exceeded. Please try again later.";
-                } else if (error.message.includes('CONFIG')) {
-                    displayMsg = "Error: System Configuration Missing. Please reload the page.";
-                } else if (error.message.includes('fetch')) {
-                    displayMsg = "Error: No Internet Connection or Network Blocked.";
-                }
-
-                addMessage(displayMsg, 'bot');
-                speak("Error occurred");
-            }
-        }
-
-        async function getAIResponseWithContext(userMessage) {
-            const apiKey = CONFIG.getApiKey();
-            const settings = getSettings();
-            const lang = settings.lang || 'en';
-
-            if (!apiKey) {
-                return lang === 'ta'
-                    ? "தயவுசெய்து அமைப்புகளில் (Settings) API Key-ஐ உள்ளிடவும்."
-                    : "Please set your Google Gemini API Key in Settings to enable intelligence.";
-            }
-
-            // Use the intelligent chatbot engine
-            try {
-                const response = await elderCareChatbot.generateResponse(userMessage, apiKey, lang);
-                return response;
-            } catch (err) {
-                console.error('Chatbot Engine Error:', err);
-                throw err;
+                const errorMsg = "I'm having a bit of trouble, but I am still watching over you.";
+                addMessage(errorMsg, 'bot');
+                speak(errorMsg);
             }
         }
 
@@ -304,8 +497,19 @@
             div.innerText = text;
             if (isLoading) div.id = 'msg-' + Date.now();
             chatMessages.appendChild(div);
+            // Auto scroll
             chatMessages.scrollTop = chatMessages.scrollHeight;
             return div.id;
+        }
+
+        function addMessageAndSave(text, sender, isLoading = false, uiOnly = false) {
+            const id = addMessage(text, sender, isLoading);
+            if (!uiOnly && !isLoading) {
+                if (sender === 'user') elderCareChatbot.conversationHistory.push({ user: text });
+                else elderCareChatbot.conversationHistory.push({ bot: text });
+            }
+            elderCareChatbot.saveHistory();
+            return id;
         }
 
         function removeMessage(id) {
@@ -313,25 +517,28 @@
             if (el) el.remove();
         }
 
+        function clearChat() {
+            elderCareChatbot.clearHistory();
+            loadActiveSession();
+        }
+
+        function updateLastActivity() {
+            localStorage.setItem('elderLastActivity', new Date().toISOString());
+        }
+
         function toggleMic() {
             if (isListening) return;
-
-            updateLastActivity();
             micBtn.classList.add('listening');
             isListening = true;
-
             startSpeechRecognition((text) => {
                 chatInput.value = text;
                 micBtn.classList.remove('listening');
                 isListening = false;
                 sendMessage();
             });
-
             setTimeout(() => {
-                if (isListening) {
-                    micBtn.classList.remove('listening');
-                    isListening = false;
-                }
+                micBtn.classList.remove('listening');
+                isListening = false;
             }, 8000);
         }
     </script>

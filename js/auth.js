@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Redirect if already logged in (specific to index.html)
+    // Only redirect from the main hub if already logged in (optional, but keep for UX)
     if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/') {
         checkAuth(false);
     }
@@ -35,12 +35,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const validUser = users.find(u => u.username === username && u.password === password);
 
             if (validUser) {
+                // Get selected role (either from radio buttons or hidden input on specific pages)
+                const radioRole = document.querySelector('input[name="role"]:checked')?.value;
+                const hiddenRole = document.getElementById('defaultRole')?.value;
+                const selectedRole = radioRole || hiddenRole || 'elder';
+
                 // Set Session
                 const userSession = {
                     username: validUser.username,
+                    role: selectedRole,
                     loginTime: new Date().toISOString()
                 };
                 localStorage.setItem('elderUser', JSON.stringify(userSession));
+                localStorage.setItem('currentUserRole', selectedRole); // Sync for chatbot engine
                 window.location.href = 'dashboard.html';
             } else {
                 alert("Invalid username or password. Please try again or register.");

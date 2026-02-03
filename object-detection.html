@@ -69,6 +69,8 @@
     </div>
 
     <script src="js/utils.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/chatbot-engine.js"></script>
     <script>
         let model = undefined;
         let lastSpoken = "";
@@ -293,9 +295,6 @@
                 // Draw Text
                 ctx.fillStyle = '#000000';
                 ctx.fillText(label, x + 5, y + 2);
-
-                // Speak
-                debounceSpeak(label, lang);
             });
 
             // Save to localStorage ONLY if detection changed (throttle)
@@ -313,6 +312,13 @@
                     localStorage.setItem('elderRecentObjects', JSON.stringify(uniqueObjects));
                     localStorage.setItem('elderRecentTime', new Date().toISOString());
                     console.log('✅ Detection stored:', uniqueObjects);
+
+                    // TRIGGER INTELLIGENCE IMMEDIATELY (Manual trigger since storage event won't fire in same tab)
+                    if (typeof elderCareChatbot !== 'undefined') {
+                        elderCareChatbot.checkForProactiveAlerts((message) => {
+                            speak(message);
+                        });
+                    }
                 } else {
                     localStorage.removeItem('elderDetectedObjects');
                     console.log('⚪ Detection cleared');

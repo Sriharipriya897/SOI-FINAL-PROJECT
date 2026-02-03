@@ -32,16 +32,17 @@ All processing is done locally in the browser, making the system privacy-friendl
 
 ## ✨ Key Features
 
-### 🏥 **NEW: Hospital & Healthcare Integration**
-- **KG Hospital Module** - Dedicated interface for managing appointments at KG Hospital.
-- **Nurse Portal** - Secure entrance for healthcare providers to sync authoritative prescriptions and vitals.
-- **Medicine Sync** - Instant synchronization between Nurse Portal and Elder Reminders.
-- **Health Report Generation** - Downloadable PDF-style text reports for medical review.
+### 🔐 **NEW: Role-Based Safety Architecture**
+- **Multi-Role Hub (index.html)** - A central entrance for Elders, Caregivers, and Hospitals with horizontal, modern navigation.
+- **Dedicated Login Portals** - Separate login interfaces for `Elder`, `Caregiver`, and `Hospital` roles ensuring a focused experience.
+- **Unified Identity System** - Same credentials work across all roles while unlocking role-specific dashboards.
+- **Professional Exit Hub** - Securely exit the application from the main hub with one click.
+- **Information Layer (About)** - Integrated "How it works" guide accessible from every portal.
 
 ### 🤖 **NEW: Intelligent Context-Aware Chatbot**
-- **Real-time context gathering** from all app modules (objects, falls, SOS, medicines, appointments)
-- **ChatGPT-level Intelligence** - Reason across multiple systems (e.g., reminding about meds while checking fall safety)
-- **Permanent Companion Mode** - Strictly for elder safety; suppresses technical errors and API failures.
+- **Role-Speific Personas** - Chatbot adapts its tone and information based on whether it's talking to an Elder, Nurse, or Caregiver.
+- **Real-time context gathering** from all app modules (objects, falls, SOS, medicines, appointments).
+- **ChatGPT-level Intelligence** - Reason across multiple systems (e.g., reminding about meds while checking fall safety).
 - **Voice-First Navigation** - Voice command support for opening pages and booking appointments.
 
 ### 🚨 Safety & Monitoring
@@ -127,21 +128,23 @@ All processing is done locally in the browser, making the system privacy-friendl
 
 ```
 .
-├── index.html                    # Login page
-├── dashboard.html                # Main dashboard
-├── hospital.html                 # 🆕 KG Hospital appointments
-├── nurse-portal.html             # 🆕 Healthcare provider interface
+├── index.html                    # 🆕 Multi-Role Entry Hub (Portal Selection)
+├── login-elder.html              # 🆕 Dedicated Elder Login
+├── login-caregiver.html          # 🆕 Dedicated Caregiver Login
+├── login-hospital.html           # 🆕 Dedicated Hospital Login
+├── dashboard.html                # Professional dashboard (Role-aware)
+├── hospital.html                 # KG Hospital appointments
+├── nurse-portal.html             # Healthcare provider interface
 ├── chat.html                     # Intelligent chatbot interface
-├── chatbot-demo.html            # Interactive demo for testing
-├── fall-detection.html          # Fall detection with camera
-├── object-detection.html        # Object detection with warnings
-├── sos.html                     # Emergency SOS alerts
-├── medicine.html                # Medicine reminders
-├── health.html                  # Health vitals tracking
-├── profile.html                 # User profile
-├── notifications.html           # Notifications history
-├── settings.html                # App settings
-├── help.html                    # User guide
+├── fall-detection.html           # Fall detection with camera
+├── object-detection.html         # Object detection with warnings
+├── sos.html                      # Emergency SOS alerts
+├── medicine.html                 # Medicine reminders
+├── health.html                   # Health vitals tracking
+├── profile.html                  # User profile
+├── notifications.html            # Notifications history
+├── settings.html                 # App settings
+├── help.html                     # User guide
 ├── css/
 │   └── style.css               # Styling
 ├── js/

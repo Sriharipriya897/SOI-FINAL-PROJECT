@@ -16,83 +16,89 @@
         <header
             style="width: 100%; max-width: 1000px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
             <div>
-                <h1 data-i18n="app_title">Elder Care Companion</h1>
-                <p><span data-i18n="welcome">Welcome</span>, <span id="usernameDisplay">User</span></p>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="window.location.href='settings.html'" class="secondary"
-                    style="padding: 10px 20px; margin: 0;">
-                    <i class="fas fa-cog"></i> <span data-i18n="settings">Settings</span>
-                </button>
-                <button id="logoutBtn" class="alert" style="padding: 10px 20px; margin: 0;">
-                    <i class="fas fa-sign-out-alt"></i> <span data-i18n="logout">Logout</span>
-                </button>
-            </div>
+                <div>
+                    <h1 data-i18n="app_title">Elder Care Companion</h1>
+                    <p>
+                        <span data-i18n="welcome">Welcome</span>, <span id="usernameDisplay">User</span>
+                        (<span id="roleDisplay"
+                            style="color: var(--primary-color); font-weight: 600; text-transform: capitalize;">Elder</span>)
+                    </p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="window.location.href='settings.html'" class="secondary"
+                        style="padding: 10px 20px; margin: 0;">
+                        <i class="fas fa-cog"></i> <span data-i18n="settings">Settings</span>
+                    </button>
+                    <button id="logoutBtn" class="alert" style="padding: 10px 20px; margin: 0;">
+                        <i class="fas fa-sign-out-alt"></i> <span data-i18n="logout">Logout</span>
+                    </button>
+                </div>
         </header>
 
-        <div class="dashboard-grid">
-            <!-- Chat -->
-            <a href="chat.html" class="dashboard-card">
+        <div class="dashboard-grid" id="dashboardGrid">
+            <!-- Chat (All) -->
+            <a href="chat.html" class="dashboard-card" data-roles="elder,caregiver,hospital">
                 <i class="fas fa-comments"></i>
                 <h3 data-i18n="chat">Companion Chat</h3>
             </a>
 
-            <!-- Object Detection -->
-            <a href="object-detection.html" class="dashboard-card">
+            <!-- Object Detection (Elder only) -->
+            <a href="object-detection.html" class="dashboard-card" data-roles="elder">
                 <i class="fas fa-eye"></i>
                 <h3 data-i18n="object_detection">Object Detection</h3>
             </a>
 
-            <!-- Fall Detection -->
-            <a href="fall-detection.html" class="dashboard-card">
+            <!-- Fall Detection (Elder only) -->
+            <a href="fall-detection.html" class="dashboard-card" data-roles="elder">
                 <i class="fas fa-person-falling"></i>
                 <h3 data-i18n="fall_detection">Fall Detection</h3>
             </a>
 
-            <!-- Medicine -->
-            <a href="medicine.html" class="dashboard-card">
+            <!-- Medicine (Elder, Caregiver) -->
+            <a href="medicine.html" class="dashboard-card" data-roles="elder,caregiver">
                 <i class="fas fa-pills"></i>
                 <h3 data-i18n="medicine">Medicines</h3>
             </a>
 
-            <!-- SOS -->
-            <a href="sos.html" class="dashboard-card" style="border-color: var(--error-color);">
+            <!-- SOS (Elder only) -->
+            <a href="sos.html" class="dashboard-card" data-roles="elder" style="border-color: var(--error-color);">
                 <i class="fas fa-ambulance" style="color: var(--error-color);"></i>
                 <h3 data-i18n="sos" style="color: var(--error-color);">SOS Emergency</h3>
             </a>
 
-            <!-- Health -->
-            <a href="health.html" class="dashboard-card">
+            <!-- Health Tracker (Elder, Hospital) -->
+            <a href="health.html" class="dashboard-card" data-roles="elder,hospital">
                 <i class="fas fa-heartbeat"></i>
-                <h3 data-i18n="health">Health Tracker</h3>
+                <h3 id="healthCardTitle">Health Tracker / Reports</h3>
             </a>
 
-            <!-- Profile -->
-            <a href="profile.html" class="dashboard-card">
+            <!-- Profile (Elder only) -->
+            <a href="profile.html" class="dashboard-card" data-roles="elder">
                 <i class="fas fa-user-circle"></i>
                 <h3 data-i18n="profile">My Profile</h3>
             </a>
 
-            <!-- Notifications -->
-            <a href="notifications.html" class="dashboard-card">
+            <!-- Notifications (Elder only) -->
+            <a href="notifications.html" class="dashboard-card" data-roles="elder">
                 <i class="fas fa-bell"></i>
                 <h3 data-i18n="notifications">Notifications</h3>
             </a>
 
-            <!-- Hospital -->
-            <a href="hospital.html" class="dashboard-card">
+            <!-- Hospital (Elder, Hospital) -->
+            <a href="hospital.html" class="dashboard-card" data-roles="elder,hospital">
                 <i class="fas fa-hospital"></i>
                 <h3>Hospital Appointments</h3>
             </a>
 
-            <!-- Nurse Portal -->
-            <a href="nurse-portal.html" class="dashboard-card" style="background: rgba(44, 62, 80, 0.05);">
+            <!-- Nurse Portal (Hospital only) -->
+            <a href="nurse-portal.html" class="dashboard-card" data-roles="hospital"
+                style="background: rgba(44, 62, 80, 0.05);">
                 <i class="fas fa-user-nurse"></i>
                 <h3>Nurse Portal</h3>
             </a>
 
-            <!-- Help -->
-            <a href="help.html" class="dashboard-card">
+            <!-- Help (Elder only) -->
+            <a href="help.html" class="dashboard-card" data-roles="elder">
                 <i class="fas fa-question-circle"></i>
                 <h3 data-i18n="help">Help & Guide</h3>
             </a>
@@ -100,15 +106,96 @@
     </div>
 
     <script src="js/utils.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/chatbot-engine.js"></script>
     <script src="js/auth.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const user = checkAuth();
             if (user && user.username) {
                 document.getElementById('usernameDisplay').innerText = user.username;
+
+                // Set initial role
+                const currentRole = localStorage.getItem('currentUserRole') || 'elder';
+                document.getElementById('roleDisplay').innerText = currentRole;
+                document.getElementById('roleSwitcher').value = currentRole;
+                elderCareChatbot.setRole(currentRole);
+
+                // Filter Cards based on role
+                filterDashboard(currentRole);
             }
+
+            document.getElementById('roleSwitcher').addEventListener('change', (e) => {
+                const newRole = e.target.value;
+                elderCareChatbot.setRole(newRole);
+                document.getElementById('roleDisplay').innerText = newRole;
+                // Update session
+                const session = JSON.parse(localStorage.getItem('elderUser'));
+                if (session) {
+                    session.role = newRole;
+                    localStorage.setItem('elderUser', JSON.stringify(session));
+                }
+
+                filterDashboard(newRole);
+                alert(`Switched to ${newRole.toUpperCase()} view.`);
+                // We don't necessarily need window.location.reload() if we filter manually, 
+                // but it helps reset the AI context state too.
+                window.location.reload();
+            });
         });
+
+        function filterDashboard(role) {
+            const cards = document.querySelectorAll('.dashboard-card');
+            cards.forEach(card => {
+                const allowedRoles = card.getAttribute('data-roles').split(',');
+                if (allowedRoles.includes(role)) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Specific UI tweaks for Hospital Role's "Report Data" requirement
+            if (role === 'hospital') {
+                document.getElementById('healthCardTitle').innerText = "Report Data (Health)";
+            }
+        }
+
+        function exitApp() {
+            localStorage.removeItem('elderUser');
+            window.location.href = 'index.html';
+        }
+
+        function openAboutModal() {
+            document.getElementById('aboutModal').style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
     </script>
+    <!-- About Modal (Re-used from Hub) -->
+    <div id="aboutModal" class="modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(5px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+        <div class="modal-content"
+            style="background:var(--card-bg); padding:40px; border-radius:20px; max-width:600px; width:100%; position:relative; box-shadow:var(--card-shadow); color:var(--text-color);">
+            <span class="close-modal" onclick="closeModal('aboutModal')"
+                style="position:absolute; top:20px; right:20px; font-size:1.5rem; cursor:pointer; color:grey;">&times;</span>
+            <h2 style="margin-bottom: 25px;">About Elder Care Companion</h2>
+            <div style="margin-bottom: 20px;">
+                <h4 style="color:var(--primary-color); margin-bottom:10px;"><i class="fas fa-question-circle"></i> What
+                    is this?</h4>
+                <p>Elder Care Companion is an AI-powered safety platform for senior citizens.</p>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <h4 style="color:var(--primary-color); margin-bottom:10px;"><i class="fas fa-cog"></i> How it works?
+                </h4>
+                <p>Uses AI vision for safety and Gemini for proactive companionship.</p>
+            </div>
+            <button class="primary" onclick="closeModal('aboutModal')" style="width: 100%; margin-top: 10px;">Got
+                it!</button>
+        </div>
+    </div>
 </body>
 
 </html>

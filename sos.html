@@ -80,10 +80,21 @@
                 Press the button below to send an emergency alert.
             </p>
 
-            <button class="sos-btn" id="sosBtn" onclick="triggerSOS()">
-                <i class="fas fa-ambulance"></i>
-                <span style="font-size: 2rem; display: block; margin-top: 10px;">SOS</span>
-            </button>
+            <div style="position: relative; width: 250px; height: 250px; margin: 50px auto;">
+                <button class="sos-btn" id="sosBtn" onmousedown="startHold()" onmouseup="endHold()"
+                    ontouchstart="startHold()" ontouchend="endHold()" style="margin: 0;">
+                    <i class="fas fa-ambulance"></i>
+                    <span id="sosBtnText" style="font-size: 2rem; display: block; margin-top: 10px;">SOS</span>
+                </button>
+                <svg class="hold-progress" width="250" height="250"
+                    style="position: absolute; top: 0; left: 0; pointer-events: none; transform: rotate(-90deg);">
+                    <circle cx="125" cy="125" r="120" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="10">
+                    </circle>
+                    <circle id="holdCircle" cx="125" cy="125" r="120" fill="none" stroke="white" stroke-width="10"
+                        stroke-dasharray="754" stroke-dashoffset="754"
+                        style="transition: stroke-dashoffset 0.1s linear;"></circle>
+                </svg>
+            </div>
 
             <div id="statusMsg" class="hidden"
                 style="margin-top: 20px; font-weight: bold; font-size: 1.2rem; color: var(--error-color);">
@@ -110,7 +121,10 @@
             const isAuto = urlParams.get('auto');
             if (isAuto === 'true') {
                 // Auto trigger after a small delay to ensure page load
-                setTimeout(triggerSOS, 1000);
+                setTimeout(() => {
+                    const btn = document.getElementById('sosBtn');
+                    if (btn) triggerSOS();
+                }, 1000);
             }
 
             // Initialize Shake Detection
@@ -120,8 +134,39 @@
             initVolumeKeySOS();
         });
 
-        // --- Shake Detection Logic ---
-        let shakeThreshold = 15; // Sensitivity
+        // --- Long Press Logic ---
+        let holdTimer;
+        let holdProgress = 0;
+        const HOLD_DURATION = 2000; // 2 seconds
+
+        function startHold() {
+            if (isSOSActive) {
+                stopSOS();
+                return;
+            }
+            holdProgress = 0;
+            const circle = document.getElementById('holdCircle');
+            const total = 754; // 2 * PI * 120
+
+            holdTimer = setInterval(() => {
+                holdProgress += 100;
+                const offset = total - (total * (holdProgress / HOLD_DURATION));
+                circle.style.strokeDashoffset = Math.max(0, offset);
+
+                if (holdProgress >= HOLD_DURATION) {
+                    clearInterval(holdTimer);
+                    triggerSOS();
+                }
+            }, 100);
+        }
+
+        function endHold() {
+            clearInterval(holdTimer);
+            document.getElementById('holdCircle').style.strokeDashoffset = 754;
+        }
+
+        // --- Shake Detection Logic (Robust) ---
+        let shakeThreshold = 25; // Increased from 15 for better accuracy
         let lastX = 0, lastY = 0, lastZ = 0;
         let lastUpdate = 0;
         let shakeCount = 0;
@@ -142,9 +187,13 @@
                         const y = acceleration.y;
                         const z = acceleration.z;
 
-                        const speed = Math.abs(x + y + z - lastX - lastY - lastZ) / diffTime * 10000;
+                        const speed = Math.sqrt(
+                            Math.pow(x - lastX, 2) +
+                            Math.pow(y - lastY, 2) +
+                            Math.pow(z - lastZ, 2)
+                        ) / diffTime * 10000;
 
-                        if (speed > shakeThreshold * 100) { // Scaled threshold
+                        if (speed > shakeThreshold * 150) { // Scaled threshold
                             const now = new Date().getTime();
                             // Debounce shakes (prevent multiple triggers for one shake)
                             if (now - lastShakeTime > 1000) {
@@ -152,8 +201,8 @@
                                 lastShakeTime = now;
                                 console.log("Shake detected! Count:", shakeCount);
 
-                                // Trigger on 2 shakes within 5 seconds for robustness
-                                if (shakeCount >= 2) {
+                                // Trigger on 3 strong shakes within 5 seconds for robustness
+                                if (shakeCount >= 3) {
                                     triggerSOS();
                                     shakeCount = 0;
                                 }
@@ -219,8 +268,9 @@
 
             document.body.classList.add('alert-active');
 
-            const btn = document.getElementById('sosBtn');
-            btn.innerHTML = '<i class="fas fa-stop"></i><span style="font-size: 2rem; display: block; margin-top: 10px;">STOP</span>';
+            const btnText = document.getElementById('sosBtnText');
+            btnText.innerHTML = 'STOP';
+            document.getElementById('sosBtn').querySelector('i').className = 'fas fa-stop';
 
             const status = document.getElementById('statusMsg');
             status.classList.remove('hidden');
@@ -257,8 +307,9 @@
 
             document.body.classList.remove('alert-active');
 
-            const btn = document.getElementById('sosBtn');
-            btn.innerHTML = '<i class="fas fa-ambulance"></i><span style="font-size: 2rem; display: block; margin-top: 10px;">SOS</span>';
+            const btnText = document.getElementById('sosBtnText');
+            btnText.innerHTML = 'SOS';
+            document.getElementById('sosBtn').querySelector('i').className = 'fas fa-ambulance';
 
             document.getElementById('statusMsg').classList.add('hidden');
 

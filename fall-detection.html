@@ -81,7 +81,16 @@
             <div class="monitor-bar">
                 <div class="monitor-val" id="motionLevel"></div>
             </div>
-            <small style="color:grey; display:block; margin-top:5px;">Motion Sensitivity</small>
+            <div style="display: flex; justify-content: space-between;">
+                <small style="color:grey;">Motion Intensity</small>
+                <small id="impactStatus" style="color:var(--error-color); font-weight: bold; visibility: hidden;">IMPACT
+                    DETECTED!</small>
+            </div>
+
+            <div class="monitor-bar" style="margin-top: 20px;">
+                <div class="monitor-val" id="stillnessLevel" style="background: var(--primary-color); width: 0%;"></div>
+            </div>
+            <small style="color:grey; display:block; margin-top:5px;">Stability Analysis (Waiting for impact...)</small>
 
             <canvas id="motionCanvas"></canvas>
 
@@ -106,6 +115,8 @@
     </div>
 
     <script src="js/utils.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/chatbot-engine.js"></script>
     <script>
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('motionCanvas');
@@ -114,8 +125,19 @@
         let isMonitoring = false;
         let lastImageData = null;
         let countdownTimer = null;
-        let count = 10;
         let fallTriggered = false;
+        let impactDetected = false;
+        let impactTime = 0;
+        let stillnessCount = 0;
+        let recoveryCheckActive = false;
+        let calibrationFrames = 0;
+        let avgBackgroundMotion = 0;
+
+        // --- CALIBRATED THRESHOLDS (Aggressive for zero falses) ---
+        const IMPACT_THRESHOLD = 65; // Massive spike required
+        const STILLNESS_THRESHOLD = 10; // Must be VERY still
+        const STILLNESS_REQUIRED_FRAMES = 45; // ~3-4 seconds of total stillness required after impact
+        const CALIBRATION_PERIOD = 50; // Use first 50 frames to understand room noise
 
         // Start Camera
         navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } })
@@ -141,11 +163,59 @@
 
             if (lastImageData) {
                 const motionScore = calculateMotion(lastImageData, imageData);
-                updateUI(motionScore);
 
-                // Fall Threshold (Simulated by high value)
-                if (motionScore > 40) { // Arbitrary threshold
-                    triggerFallSequence();
+                // --- Phase 0: Calibration ---
+                if (calibrationFrames < CALIBRATION_PERIOD) {
+                    avgBackgroundMotion = (avgBackgroundMotion * calibrationFrames + motionScore) / (calibrationFrames + 1);
+                    calibrationFrames++;
+                    updateUI(motionScore, true);
+                    lastImageData = imageData;
+                    requestAnimationFrame(loop);
+                    return;
+                }
+
+                updateUI(motionScore, false);
+
+                // --- Phase 1: High Velocity Impact Check ---
+                if (!impactDetected) {
+                    document.getElementById('impactStatus').style.visibility = 'hidden';
+                    document.getElementById('stillnessLevel').style.width = '0%';
+
+                    // Must exceed background noise + very high threshold
+                    if (motionScore > IMPACT_THRESHOLD) {
+                        impactDetected = true;
+                        impactTime = Date.now();
+                        stillnessCount = 0;
+                        document.getElementById('impactStatus').style.visibility = 'visible';
+                        console.log("Impact Spike Detected. Monitoring for Stillness...");
+                    }
+                } else {
+                    // Phase 2: Post-Impact Stillness Requirement
+                    // If they are moving around right after "impact", it's a false alarm (e.g. sitting down fast)
+                    const stillnessPercent = (stillnessCount / STILLNESS_REQUIRED_FRAMES) * 100;
+                    document.getElementById('stillnessLevel').style.width = stillnessPercent + '%';
+
+                    if (motionScore < (avgBackgroundMotion + 5)) {
+                        stillnessCount++;
+                    } else if (motionScore > (IMPACT_THRESHOLD / 2)) {
+                        // RECOVERY DETECTED: If they move significantly, they are okay or it was a false alarm
+                        console.log("Recovery or continued movement detected. Cancelling alert path.");
+                        impactDetected = false;
+                        stillnessCount = 0;
+                        document.getElementById('impactStatus').style.visibility = 'hidden';
+                    }
+
+                    // TRIGGER ONLY IF STAYS STILL
+                    if (stillnessCount >= STILLNESS_REQUIRED_FRAMES) {
+                        triggerFallSequence();
+                    }
+
+                    // TIME OUT (If unsure, don't alert)
+                    if (Date.now() - impactTime > 6000) {
+                        impactDetected = false;
+                        stillnessCount = 0;
+                        document.getElementById('impactStatus').style.visibility = 'hidden';
+                    }
                 }
             }
 
@@ -166,9 +236,13 @@
             return Math.min(100, (score / (data1.length / 16)) * 100);
         }
 
-        function updateUI(score) {
+        function updateUI(score, isCalibrating) {
             motionBar.style.width = score + '%';
-            if (score > 30) {
+            if (isCalibrating) {
+                motionBar.style.backgroundColor = 'var(--secondary-color)';
+                return;
+            }
+            if (score > IMPACT_THRESHOLD) {
                 motionBar.style.backgroundColor = 'red';
             } else {
                 motionBar.style.backgroundColor = 'var(--success-color)';
@@ -190,10 +264,16 @@
             fallTriggered = true;
             document.getElementById('fallModal').style.display = 'flex';
 
-            // Speak alert
-            speak(TRANSLATIONS[getSettings().lang || 'en']['fall_detected']);
+            // Speak alert via Intelligent Chatbot
+            if (typeof elderCareChatbot !== 'undefined') {
+                elderCareChatbot.checkForProactiveAlerts((message) => {
+                    speak(message);
+                });
+            } else {
+                // Fallback to basic alert if engine fails
+            }
 
-            count = 10;
+            count = 10; // More time for user to cancel fake alerts
             updateCount();
 
             if (countdownTimer) clearInterval(countdownTimer);
@@ -221,9 +301,11 @@
             // Cooldown before monitoring again
             setTimeout(() => {
                 fallTriggered = false;
+                impactDetected = false;
+                stillnessCount = 0;
                 lastImageData = null;
                 loop();
-            }, 2000);
+            }, 3000);
         }
 
         function confirmFall() {

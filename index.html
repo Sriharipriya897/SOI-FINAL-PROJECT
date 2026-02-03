@@ -4,82 +4,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elder Care Companion - Login</title>
+    <title>Elder Care Companion - Choose Role</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .page-header {
+            position: fixed;
+            top: 0;
+            right: 0;
+            padding: 20px 40px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .header-link {
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-link:hover {
+            color: var(--primary-color);
+        }
+
+        .hub-main {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .role-hub-container {
+            display: flex;
+            flex-direction: row;
+            /* Horizontal Position */
+            gap: 25px;
+            margin-top: 40px;
+            max-width: 1200px;
+            width: 100%;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .role-card {
+            background: var(--card-bg);
+            padding: 40px 30px;
+            border-radius: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid transparent;
+            text-decoration: none;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 320px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        .role-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary-color);
+            box-shadow: 0 20px 40px rgba(76, 110, 245, 0.1);
+        }
+
+        .role-icon {
+            font-size: 3.5rem;
+            color: var(--primary-color);
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .role-info h3 {
+            margin: 0;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .role-info p {
+            margin: 0;
+            color: grey;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 100%;
+            position: relative;
+            box-shadow: var(--card-shadow);
+            color: var(--text-color);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: grey;
+        }
+
+        .about-section {
+            margin-bottom: 25px;
+        }
+
+        .about-section h4 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        @media (max-width: 1000px) {
+            .role-hub-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .page-header {
+                padding: 15px;
+                width: 100%;
+                justify-content: flex-end;
+                background: var(--bg-color);
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-    <div class="container">
-        <div class="card">
-            <h1 data-i18n="app_title" class="mb-2">Elder Care Companion</h1>
+    <header class="page-header">
+        <a class="header-link" onclick="exitApp()"
+            style="background: rgba(0,0,0,0.05); padding: 5px 12px; border-radius: 6px;">
+            <i class="fas fa-door-open"></i> Exit
+        </a>
+        <a class="header-link" onclick="openModal('aboutModal')">
+            <i class="fas fa-info-circle"></i> About
+        </a>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-globe" style="color: var(--primary-color);"></i>
+            <select id="langSelect"
+                style="padding: 5px 10px; border-radius: 8px; border: 1px solid #ddd; background: var(--card-bg); color: var(--text-color); font-size: 0.9rem;">
+                <option value="en">English</option>
+                <option value="ta">தமிழ்</option>
+            </select>
+        </div>
+    </header>
 
-            <!-- Login Container -->
-            <div id="login-container">
-                <h2 data-i18n="login_title" class="mb-1">Login</h2>
-                <form id="loginForm">
-                    <input type="text" id="username" data-i18n-placeholder="username" placeholder="Username" required
-                        autocomplete="username">
-                    <input type="password" id="password" data-i18n-placeholder="password" placeholder="Password"
-                        required autocomplete="current-password">
+    <div class="hub-main">
+        <h1 data-i18n="app_title" style="font-size: 3rem; margin-bottom: 10px;">Elder Care Companion</h1>
+        <p style="font-size: 1.2rem; color: grey;">Choose your portal to get started</p>
 
-                    <button type="submit" data-i18n="login_btn">Login</button>
-                    <p style="margin-top: 1rem; font-size: 0.9rem;">
-                        New User? <a href="#" id="showRegister" style="color: var(--primary-color);">Register here</a>
-                    </p>
-                </form>
+        <div class="role-hub-container">
+            <a href="login-elder.html" class="role-card">
+                <div class="role-icon"><i class="fas fa-blind"></i></div>
+                <div class="role-info">
+                    <h3>Elder Portal</h3>
+                    <p>Personalized health tracking, emergency SOS, and proactive AI companion.</p>
+                </div>
+            </a>
+
+            <a href="login-caregiver.html" class="role-card">
+                <div class="role-icon"><i class="fas fa-user-nurse"></i></div>
+                <div class="role-info">
+                    <h3>Caregiver Portal</h3>
+                    <p>Real-time monitoring, fall alerts, and medication adherence reports.</p>
+                </div>
+            </a>
+
+            <a href="login-hospital.html" class="role-card">
+                <div class="role-icon"><i class="fas fa-hospital-user"></i></div>
+                <div class="role-info">
+                    <h3>Hospital Portal</h3>
+                    <p>Clinical data access, patient history, and medical coordination tools.</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="aboutModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('aboutModal')">&times;</span>
+            <h2 style="margin-bottom: 25px;">About Elder Care Companion</h2>
+
+            <div class="about-section">
+                <h4><i class="fas fa-question-circle"></i> What is this?</h4>
+                <p>Elder Care Companion is an AI-powered safety and wellness platform designed specifically for senior
+                    citizens and their support networks.</p>
             </div>
 
-            <!-- Register Container (Hidden by default) -->
-            <div id="register-container" style="display: none;">
-                <h2 class="mb-1">Register</h2>
-                <form id="registerForm">
-                    <input type="text" id="reg-username" placeholder="Choose Username" required autocomplete="username">
-                    <input type="password" id="reg-password" placeholder="Choose Password" required
-                        autocomplete="new-password">
-
-                    <button type="submit">Register</button>
-                    <p style="margin-top: 1rem; font-size: 0.9rem;">
-                        Already have an account? <a href="#" id="showLogin" style="color: var(--primary-color);">Login
-                            here</a>
-                    </p>
-                </form>
+            <div class="about-section">
+                <h4><i class="fas fa-cog"></i> How it works?</h4>
+                <p>The system uses vision-based AI for fall detection and object recognition, combined with a Large
+                    Language Model (Gemini) to provide natural, reassuring conversation and proactive health alerts.</p>
             </div>
 
-            <div style="margin-top: 2rem; border-top: 1px solid #eee; padding-top: 1rem;">
-                <label for="langSelect" data-i18n="language">Language</label>
-                <select id="langSelect" style="padding: 10px; border-radius: 8px; font-size: 1rem; margin-top: 5px;">
-                    <option value="en">English</option>
-                    <option value="ta">தமிழ்</option>
-                </select>
+            <div class="about-section">
+                <h4><i class="fas fa-user-check"></i> How to use it?</h4>
+                <p>1. <b>Elder:</b> Log in to start the companion. Keep the dashboard open for automatic safety
+                    monitoring.<br>
+                    2. <b>Caregiver:</b> Log in to receive alerts if a fall is detected or an SOS is triggered.<br>
+                    3. <b>Hospital:</b> Log in to review health trends and clinical adherence data.</p>
             </div>
+
+            <button class="primary" onclick="closeModal('aboutModal')" style="width: 100%; margin-top: 10px;">Got
+                it!</button>
         </div>
     </div>
 
     <script src="js/utils.js"></script>
-    <script src="js/auth.js"></script>
     <script>
-        // Language Toggle Logic for Login Page
+        function openModal(id) {
+            document.getElementById(id).style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function exitApp() {
+            localStorage.removeItem('elderUser');
+            // Try to close the window, or just go to a blank page if closing is blocked by browser
+            window.close();
+            if (!window.closed) {
+                window.location.href = "about:blank";
+            }
+        }
+
+        window.onclick = function (event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = "none";
+            }
+        }
+
         const langSelect = document.getElementById('langSelect');
         const currentSettings = getSettings();
         langSelect.value = currentSettings.lang;
-
         langSelect.addEventListener('change', (e) => {
-            const newLang = e.target.value;
             const s = getSettings();
-            s.lang = newLang;
+            s.lang = e.target.value;
             saveSettings(s);
+            location.reload();
         });
 
-        // Basic placeholder translation helper
         document.addEventListener('DOMContentLoaded', () => {
-            // Additional translation for placeholders if needed
-            const inputs = document.querySelectorAll('input[data-i18n-placeholder]');
-            const lang = getSettings().lang;
-            inputs.forEach(input => {
-                const key = input.getAttribute('data-i18n-placeholder');
-                if (TRANSLATIONS[lang][key]) input.placeholder = TRANSLATIONS[lang][key];
-            });
+            applySettings();
         });
     </script>
 </body>
