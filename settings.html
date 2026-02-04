@@ -11,11 +11,14 @@
 
 <body>
 
-    <div class="container">
-        <div class="card" style="max-width: 600px; text-align: left;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 data-i18n="settings">Settings</h2>
-                <button onclick="window.history.back()" class="secondary" style="width: auto; padding: 10px 15px;">
+    <div class="container"
+        style="background: radial-gradient(circle at top left, var(--secondary-color), transparent);">
+        <div class="card fade-in"
+            style="max-width: 650px; text-align: left; border-top: 5px solid var(--primary-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h2 data-i18n="settings" style="margin: 0; color: var(--text-color);"><i class="fas fa-cog"
+                        style="color: var(--primary-color);"></i> Settings</h2>
+                <button onclick="window.history.back()" class="secondary" style="width: auto; padding: 10px 20px;">
                     <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
                 </button>
             </div>
@@ -35,9 +38,8 @@
                 <label for="settingTheme" data-i18n="theme"
                     style="display: block; margin-bottom: 10px; font-weight: bold;">Color Theme</label>
                 <select id="settingTheme">
-                    <option value="blue" data-i18n="theme_blue">Blue (Default)</option>
-                    <option value="dark" data-i18n="theme_dark">Dark Mode</option>
-                    <option value="contrast" data-i18n="theme_contrast">High Contrast</option>
+                    <option value="green" data-i18n="theme_green">Green (Default)</option>
+                    <option value="blue" data-i18n="theme_blue">Blue</option>
                 </select>
             </div>
 
@@ -55,23 +57,30 @@
             <hr style="margin: 30px 0; border: 1px solid #ddd;">
 
             <!-- AI API Settings -->
-            <h3 style="margin-bottom: 15px;" data-i18n="api_settings">AI API Settings</h3>
-            <div class="mb-2">
-                <label for="geminiApiKey" data-i18n="api_key"
-                    style="display: block; margin-bottom: 10px; font-weight: bold;">Google Gemini API Key</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="password" id="geminiApiKey" data-i18n-placeholder="api_placeholder"
-                        placeholder="Enter API Key"
-                        style="flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 8px;">
-                    <button id="toggleApiBtn" type="button" class="secondary"
-                        style="width: 50px; padding: 0; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-eye" id="eyeIcon"></i>
-                    </button>
+            <div class="card"
+                style="background: var(--card-bg); border: 1px solid rgba(0,0,0,0.05); padding: 20px; box-shadow: none;">
+                <h3 style="margin-bottom: 15px; color: var(--primary-color);" data-i18n="api_settings"><i
+                        class="fas fa-robot"></i> AI Engine Configuration</h3>
+                <div class="mb-2">
+                    <label for="geminiApiKey" data-i18n="api_key"
+                        style="display: block; margin-bottom: 10px; font-weight: 600; color: var(--text-muted);">Google
+                        Gemini API Key</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="password" id="geminiApiKey" data-i18n-placeholder="api_placeholder"
+                            placeholder="Enter your API Key"
+                            style="flex: 1; padding: 12px; border: 2px solid #E8F8F5; border-radius: 8px; transition: all 0.3s ease;">
+                        <button id="toggleApiBtn" type="button" class="secondary"
+                            style="width: 50px; padding: 0; display: flex; align-items: center; justify-content: center; background: var(--secondary-color); color: var(--primary-color);">
+                            <i class="fas fa-eye" id="eyeIcon"></i>
+                        </button>
+                    </div>
                 </div>
-                <div style="margin-top: 10px; display: flex; align-items: center;">
+                <div style="margin-top: 15px; display: flex; align-items: center; justify-content: space-between;">
                     <button type="button" onclick="testApiConnection()" class="secondary" data-i18n="test_api"
-                        style="width: auto; font-size: 0.9rem; padding: 8px 15px; margin: 0;">Test API</button>
-                    <span id="apiStatus" style="margin-left: 15px; font-weight: bold; font-size: 0.9rem;"></span>
+                        style="width: auto; font-size: 0.9rem; padding: 10px 25px; margin: 0; background: white; border: 1px solid var(--primary-color); color: var(--primary-color);">
+                        <i class="fas fa-bolt"></i> Test Connection
+                    </button>
+                    <span id="apiStatus" style="font-weight: 600; font-size: 0.9rem;"></span>
                 </div>
             </div>
 
@@ -117,17 +126,23 @@
                     style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px;">
             </div>
 
-            <div class="mb-2" style="display: flex; gap: 10px; margin-top: 20px;">
-                <button onclick="saveAndApply()" style="flex: 2;" data-i18n="save">Save Settings</button>
-                <button onclick="testSosEmail()" class="secondary" style="flex: 1;">
+            <div class="mb-2" style="display: flex; gap: 15px; margin-top: 30px;">
+                <button onclick="saveAndApply()"
+                    style="flex: 2; padding: 15px; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);"
+                    data-i18n="save">
+                    <i class="fas fa-save"></i> Save Settings
+                </button>
+                <button onclick="testSosEmail()" class="secondary"
+                    style="flex: 1; background: white; color: var(--primary-color); border: 1px solid var(--primary-color);">
                     <i class="fas fa-paper-plane"></i> Test Alert
                 </button>
             </div>
             <div id="testEmailStatus"
                 style="margin-top: 10px; font-weight: bold; font-size: 0.9rem; text-align: center;"></div>
 
-            <button onclick="deleteEmailConfig()" class="alert" style="margin-top: 15px; background-color: #d64545;">
-                <i class="fas fa-trash"></i> <span data-i18n="delete_email">Delete Email Data</span>
+            <button onclick="deleteEmailConfig()" class="alert"
+                style="margin-top: 15px; background-color: white; color: var(--error-color); border: 1px solid var(--error-color);">
+                <i class="fas fa-trash"></i> <span data-i18n="delete_email">Clear Configuration</span>
             </button>
         </div>
     </div>

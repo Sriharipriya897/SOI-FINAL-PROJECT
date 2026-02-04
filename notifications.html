@@ -11,12 +11,16 @@
 
 <body>
 
-    <div class="container">
-        <div class="card" style="max-width: 800px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 data-i18n="notifications">Notifications</h2>
+    <div class="container"
+        style="background: radial-gradient(circle at top left, var(--secondary-color), transparent);">
+        <div class="card fade-in" style="max-width: 800px; border-top: 5px solid var(--primary-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-bell" style="color: var(--primary-color); font-size: 2rem;"></i>
+                    <h2 style="margin: 0; color: var(--text-color);">Notifications</h2>
+                </div>
                 <button onclick="window.location.href='dashboard.html'" class="secondary"
-                    style="width: auto; padding: 10px 15px;">
+                    style="width: auto; padding: 10px 20px;">
                     <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
                 </button>
             </div>
@@ -59,6 +63,12 @@
 
                 item.style.borderLeft = borderLeft;
                 item.style.textAlign = 'left';
+                item.className = 'card fade-in';
+                item.style.marginBottom = '10px';
+                item.style.padding = '20px';
+                item.style.maxWidth = '100%';
+                // Remove redundant box shadow if handled by class
+                item.style.boxShadow = '0 2px 5px rgba(0,0,0,0.05)';
 
                 item.innerHTML = `
                     <h3>${n.title}</h3>

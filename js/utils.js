@@ -24,9 +24,8 @@ const TRANSLATIONS = {
         'back': 'Back',
         'save': 'Save',
         'exit': 'Exit',
+        'theme_green': 'Green',
         'theme_blue': 'Blue',
-        'theme_dark': 'Dark Mode',
-        'theme_contrast': 'High Contrast',
         'size_normal': 'Normal',
         'size_large': 'Large',
         'size_xl': 'Extra Large',
@@ -99,9 +98,8 @@ const TRANSLATIONS = {
         'back': 'பின்செல்',
         'save': 'சேமி',
         'exit': 'வெளியேறவும்',
+        'theme_green': 'பச்சை',
         'theme_blue': 'நீலம்',
-        'theme_dark': 'இரவு முறை',
-        'theme_contrast': 'உயர் மாறுபாடு',
         'size_normal': 'சாதாரணம்',
         'size_large': 'பெரியது',
         'size_xl': 'மிகப் பெரியது',
@@ -153,7 +151,7 @@ const TRANSLATIONS = {
 
 const DEFAULTS = {
     lang: 'en',
-    theme: 'blue',
+    theme: 'green',
     fontSize: 'normal'
 };
 
@@ -167,23 +165,6 @@ function saveSettings(settings) {
     applySettings();
 }
 
-function applySettings() {
-    const settings = getSettings();
-    const body = document.body;
-
-    // Apply Theme
-    body.classList.remove('dark-theme', 'high-contrast');
-    if (settings.theme === 'dark') body.classList.add('dark-theme');
-    if (settings.theme === 'contrast') body.classList.add('high-contrast');
-
-    // Apply Font Size
-    body.classList.remove('font-large', 'font-xl');
-    if (settings.fontSize === 'large') body.classList.add('font-large');
-    if (settings.fontSize === 'xl') body.classList.add('font-xl');
-
-    // Apply Language
-    updateText(settings.lang);
-}
 
 function updateText(lang) {
     const textElements = document.querySelectorAll('[data-i18n]');
@@ -286,8 +267,6 @@ const COCO_TRANSLATIONS = {
     'toothbrush': 'பல் துலக்கி'
 };
 
-// ... existing code ...
-
 // Speech Helpers
 function startSpeechRecognition(callback) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -356,6 +335,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // Pre-load voices
     window.speechSynthesis.getVoices();
 });
+
+function applySettings() {
+    const settings = getSettings();
+    const root = document.documentElement;
+
+    // Apply Theme
+    root.classList.remove('blue-theme');
+    if (settings.theme === 'blue') root.classList.add('blue-theme');
+
+    // Apply Font Size
+    root.classList.remove('font-large', 'font-xl');
+    if (settings.fontSize === 'large') root.classList.add('font-large');
+    if (settings.fontSize === 'xl') root.classList.add('font-xl');
+
+    // Apply Language
+    updateText(settings.lang);
+}
 
 function checkAuth(restricted = true) {
     const user = localStorage.getItem('elderUser');

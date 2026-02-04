@@ -33,14 +33,20 @@
     </style>
 </head>
 
+</head>
+
 <body>
 
-    <div class="container">
-        <div class="card" style="max-width: 800px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 data-i18n="object_detection">Object Detection</h2>
+    <div class="container"
+        style="background: radial-gradient(circle at top left, var(--secondary-color), transparent);">
+        <div class="card fade-in" style="max-width: 800px; border-top: 5px solid var(--primary-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-eye" style="color: var(--primary-color); font-size: 2rem;"></i>
+                    <h2 style="margin: 0; color: var(--text-color);">Object Identification</h2>
+                </div>
                 <button onclick="window.location.href='dashboard.html'" class="secondary"
-                    style="width: auto; padding: 10px 15px;">
+                    style="width: auto; padding: 10px 20px;">
                     <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
                 </button>
             </div>
@@ -61,8 +67,8 @@
             </button>
 
             <div id="aiStatus" class="hidden"
-                style="margin-top: 15px; padding: 10px; border-radius: 8px; background: #f8f9fa; border-left: 4px solid #667eea; font-size: 0.9rem;">
-                <i class="fas fa-brain" style="color: #667eea;"></i> <strong>AI Status:</strong> <span
+                style="margin-top: 20px; padding: 15px; border-radius: 10px; background: var(--secondary-color); border-left: 5px solid var(--accent-color); font-size: 1rem; color: var(--primary-color);">
+                <i class="fas fa-brain fa-pulse" style="margin-right: 10px;"></i> <strong>AI Status:</strong> <span
                     id="statusText">Active & Monitoring</span>
             </div>
         </div>
@@ -273,8 +279,8 @@
                 const width = prediction.bbox[2];
                 const height = prediction.bbox[3];
 
-                // Draw bounding box
-                ctx.strokeStyle = '#00FFFF';
+                // Draw bounding box - Medical Teal
+                ctx.strokeStyle = '#1ABC9C';
                 ctx.lineWidth = 4;
                 ctx.strokeRect(x, y, width, height);
 
@@ -287,14 +293,19 @@
                 // Store original English name for chatbot
                 detectedObjectNames.push(prediction.class);
 
-                // Draw Background
-                ctx.fillStyle = '#00FFFF';
+                // Draw Background - Medical Teal
+                ctx.fillStyle = '#1ABC9C';
                 const textWidth = ctx.measureText(label).width;
                 ctx.fillRect(x, y, textWidth + 10, 30);
 
-                // Draw Text
-                ctx.fillStyle = '#000000';
+                // Draw Text - White for contrast against Teal
+                ctx.fillStyle = '#FFFFFF';
                 ctx.fillText(label, x + 5, y + 2);
+
+                // SPEAK the detected object (only the first/primary one to avoid chaos)
+                if (predictions.indexOf(prediction) === 0) {
+                    debounceSpeak(label, lang);
+                }
             });
 
             // Save to localStorage ONLY if detection changed (throttle)

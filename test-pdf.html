@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>PDF Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+    <h1>PDF Generation Test</h1>
+    <button onclick="testPDF()">Test PDF Download</button>
+    <script>
+        function testPDF() {
+            try {
+                console.log('Testing PDF...');
+                var doc = new window.jspdf.jsPDF();
+                doc.text('Hello World', 10, 10);
+                doc.save('test.pdf');
+                alert('PDF downloaded successfully!');
+            } catch (err) {
+                alert('Error: ' + err.message);
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+
+</html>

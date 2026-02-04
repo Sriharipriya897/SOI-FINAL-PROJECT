@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elder Care Companion - Health</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+
+    <div class="container"
+        style="background: radial-gradient(circle at top left, var(--secondary-color), transparent);">
+        <div class="card fade-in" style="max-width: 900px; width: 100%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-heartbeat" style="color: var(--primary-color); font-size: 2rem;"></i>
+                    <h2 style="margin: 0; color: var(--text-color);">Health Tracking & Reports</h2>
+                </div>
+                <button onclick="goBack()" class="secondary" style="width: auto; padding: 10px 20px;">
+                    <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
+                </button>
+            </div>
+
+            <!-- Input Form -->
+            <div id="vitalsInputCard" class="card"
+                style="background: rgba(0,0,0,0.03); margin-bottom: 20px; text-align: left;">
+                <h3 class="mb-1" data-i18n="log_vitals">Log Vitals</h3>
+                <form id="healthForm">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label data-i18n="sys_bp">Systolic BP</label>
+                            <input type="number" id="bpSys" placeholder="120" required>
+                        </div>
+                        <div>
+                            <label data-i18n="dia_bp">Diastolic BP</label>
+                            <input type="number" id="bpDia" placeholder="80" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label data-i18n="sugar">Blood Sugar (mg/dL)</label>
+                        <input type="number" id="sugar" placeholder="100">
+                    </div>
+                    <div>
+                        <label data-i18n="heart_rate">Heart Rate (BPM)</label>
+                        <input type="number" id="heartRate" placeholder="72" required>
+                    </div>
+
+                    <button type="submit" data-i18n="save">Save Log</button>
+
+                    <button type="button" onclick="downloadReport()" class="primary" style="margin-top: 15px;">
+                        <i class="fas fa-file-pdf"></i> Download Comprehensive PDF Report
+                    </button>
+
+                    <button type="button" onclick="clearHealthHistory()" class="alert"
+                        style="margin-top: 15px; width: auto; float: right;">
+                        <i class="fas fa-trash"></i> <span data-i18n="delete_health">Reset Data</span>
+                    </button>
+                    <div style="clear: both;"></div>
+                </form>
+
+                <!-- Health Status Analysis -->
+                <div id="healthStatus" class="hidden"
+                    style="margin-top: 15px; padding: 15px; border-radius: 8px; font-weight: bold; transition: all 0.5s ease;">
+                    <!-- JS will populate this -->
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div style="height: 300px; width: 100%; margin-bottom: 20px;">
+                <canvas id="healthChart"></canvas>
+            </div>
+
+            <!-- History List (Last 5) -->
+            <div id="historyList" style="margin-top: 20px; text-align: left;">
+                <!-- Logs -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script>
+        let healthChart;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            loadHealthData();
+            loadFormInputs();
+
+            // Auto-download if triggered by chatbot command
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('autoDownload') === 'true') {
+                setTimeout(function () {
+                    downloadReport();
+                    setTimeout(function () {
+                        window.location.href = 'dashboard.html';
+                    }, 2000);
+                }, 1500);
+            }
+        });
+
+        function goBack() {
+            window.location.href = 'dashboard.html';
+        }
+
+        const healthForm = document.getElementById('healthForm');
+        healthForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const sys = document.getElementById('bpSys').value;
+            const dia = document.getElementById('bpDia').value;
+            const sugar = document.getElementById('sugar').value;
+            const hr = document.getElementById('heartRate').value;
+
+            const log = {
+                date: new Date().toLocaleDateString(),
+                timestamp: Date.now(),
+                sys: sys,
+                dia: dia,
+                sugar: sugar,
+                hr: hr
+            };
+
+            const data = getHealthData();
+            data.push(log);
+            localStorage.setItem('elderHealth', JSON.stringify(data));
+
+            loadHealthData();
+            analyzeHealth(log, true);
+        });
+
+        const formInputs = ['bpSys', 'bpDia', 'sugar', 'heartRate'];
+        formInputs.forEach(function (id) {
+            document.getElementById(id).addEventListener('input', function (e) {
+                localStorage.setItem('elderHealthForm_' + id, e.target.value);
+            });
+        });
+
+        function loadFormInputs() {
+            formInputs.forEach(function (id) {
+                const val = localStorage.getItem('elderHealthForm_' + id);
+                if (val) document.getElementById(id).value = val;
+            });
+        }
+
+        function getHealthData() {
+            return JSON.parse(localStorage.getItem('elderHealth') || '[]');
+        }
+
+        function analyzeHealth(log, shouldSpeak) {
+            const settings = getSettings();
+            const lang = settings.lang || 'en';
+
+            const sys = parseInt(log.sys);
+            const dia = parseInt(log.dia);
+            const hr = parseInt(log.hr || 0);
+
+            let status = 'good';
+            let issues = [];
+
+            if (sys > 140 || dia > 90) {
+                status = 'bad';
+                issues.push("High Blood Pressure");
+            } else if (sys < 90 || dia < 60) {
+                status = 'bad';
+                issues.push("Low Blood Pressure");
+            }
+
+            if (hr > 100) {
+                status = 'bad';
+                issues.push("Fast Heart Rate");
+            } else if (hr > 0 && hr < 50) {
+                status = 'bad';
+                issues.push("Slow Heart Rate");
+            }
+
+            const statusDiv = document.getElementById('healthStatus');
+            statusDiv.classList.remove('hidden');
+            statusDiv.style.opacity = '0';
+
+            let msg = "";
+            let displayHTML = "";
+
+            if (isNaN(sys) || isNaN(dia)) {
+                statusDiv.classList.add('hidden');
+                return;
+            }
+
+            if (status === 'good') {
+                statusDiv.style.backgroundColor = 'var(--secondary-color)';
+                statusDiv.style.color = 'var(--success-color)';
+                statusDiv.style.border = '1px solid var(--success-color)';
+                const prefix = "Last Record: ";
+                msg = "Health status is stable.";
+                displayHTML = '<i class="fas fa-check-circle" style="font-size: 1.5rem; margin-right: 10px;"></i> <strong>' + prefix + '</strong>' + msg;
+            } else {
+                statusDiv.style.backgroundColor = '#FFF5F5';
+                statusDiv.style.color = 'var(--error-color)';
+                statusDiv.style.border = '1px solid var(--error-color)';
+                const prefix = "Last Record: ";
+                const issueText = issues.join(", ");
+                const advice = "Please consult a doctor.";
+                msg = issueText + ". " + advice;
+                displayHTML = '<i class="fas fa-heartbeat" style="font-size: 1.5rem; margin-right: 10px; animation: pulse 1s infinite;"></i> <strong>' + prefix + '</strong>' + msg;
+            }
+
+            statusDiv.innerHTML = displayHTML;
+            setTimeout(function () { statusDiv.style.opacity = '1'; }, 100);
+
+            if (shouldSpeak) speak(msg);
+        }
+
+        function loadHealthData() {
+            const data = getHealthData();
+            data.sort(function (a, b) { return a.timestamp - b.timestamp; });
+
+            renderChart(data);
+
+            const listObj = document.getElementById('historyList');
+            listObj.innerHTML = '<h3 class="mb-1" data-i18n="recent_logs">Recent Logs</h3>';
+
+            if (data.length === 0) {
+                listObj.innerHTML += '<p data-i18n="no_data">No data recorded yet.</p>';
+            } else {
+                const latestLog = data[data.length - 1];
+                analyzeHealth(latestLog, false);
+            }
+
+            data.slice().reverse().slice(0, 5).forEach(function (d) {
+                const item = document.createElement('div');
+                item.style.borderBottom = '1px solid #ddd';
+                item.style.padding = '10px 0';
+                item.style.display = 'flex';
+                item.style.justifyContent = 'space-between';
+                item.style.alignItems = 'center';
+
+                item.innerHTML = '<div><strong>' + d.date + '</strong><br>BP: ' + d.sys + '/' + d.dia + ' | HR: ' + (d.hr || '-') + ' | Sugar: ' + (d.sugar || '-') + '</div><button class="secondary" onclick="deleteHealthLog(' + d.timestamp + ')" style="padding: 5px 10px; font-size: 0.8rem; background-color: #FFF5F5; color: var(--error-color); border: 1px solid var(--error-color); width: auto;"><i class="fas fa-trash"></i></button>';
+                listObj.appendChild(item);
+            });
+        }
+
+        function renderChart(data) {
+            const ctx = document.getElementById('healthChart').getContext('2d');
+            const recentData = data.slice(-10);
+
+            const labels = recentData.map(function (d) { return d.date.split('/').slice(0, 2).join('/'); });
+            const sysData = recentData.map(function (d) { return d.sys; });
+            const diaData = recentData.map(function (d) { return d.dia; });
+            const sugarData = recentData.map(function (d) { return d.sugar || 0; });
+
+            if (healthChart) healthChart.destroy();
+
+            healthChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Systolic BP',
+                            data: sysData,
+                            borderColor: '#2ECC71',
+                            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Diastolic BP',
+                            data: diaData,
+                            borderColor: '#1ABC9C',
+                            backgroundColor: 'transparent',
+                            borderDash: [5, 5],
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Blood Sugar',
+                            data: sugarData,
+                            borderColor: '#E74C3C',
+                            backgroundColor: 'transparent',
+                            hidden: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        function clearHealthHistory() {
+            localStorage.removeItem('elderHealth');
+            loadHealthData();
+            document.getElementById('healthStatus').classList.add('hidden');
+
+            const formInputs = ['bpSys', 'bpDia', 'sugar', 'heartRate'];
+            formInputs.forEach(function (id) {
+                localStorage.removeItem('elderHealthForm_' + id);
+                document.getElementById(id).value = '';
+            });
+        }
+
+        function deleteHealthLog(timestamp) {
+            let data = getHealthData();
+            data = data.filter(function (d) { return d.timestamp !== timestamp; });
+            localStorage.setItem('elderHealth', JSON.stringify(data));
+            loadHealthData();
+            if (data.length === 0) document.getElementById('healthStatus').classList.add('hidden');
+        }
+
+        function downloadReport() {
+            console.log('Starting PDF generation...');
+
+            try {
+                // Check if jsPDF is available
+                if (typeof window.jspdf === 'undefined') {
+                    console.error('jsPDF library not found!');
+                    alert('PDF library is not loaded. Please refresh the page (Ctrl+F5) and try again.');
+                    return;
+                }
+
+                console.log('jsPDF library found:', window.jspdf);
+
+                // Create PDF instance
+                const doc = new window.jspdf.jsPDF();
+                console.log('PDF document created');
+
+                // Get data
+                const profile = JSON.parse(localStorage.getItem('elderProfile') || '{}');
+                const data = getHealthData();
+                const reminders = JSON.parse(localStorage.getItem('elderReminders') || '[]');
+                const appointments = JSON.parse(localStorage.getItem('elderAppointments') || '[]');
+                const falls = JSON.parse(localStorage.getItem('elderFalls') || '[]');
+                const notifications = JSON.parse(localStorage.getItem('elderNotifications') || '[]');
+
+                console.log('Data loaded:', {
+                    profile: profile,
+                    healthLogs: data.length,
+                    reminders: reminders.length,
+                    appointments: appointments.length
+                });
+
+                // Calculate date range
+                const now = new Date();
+                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                const weeklyData = data.filter(function (d) { return new Date(d.timestamp) >= weekAgo; });
+                const weeklyFalls = falls.filter(function (f) { return new Date(f.time || f.timestamp) >= weekAgo; });
+
+                // Calculate Health Score
+                let healthScore = 100;
+                const latestVitals = data[data.length - 1] || {};
+
+                if (latestVitals.sys > 140 || latestVitals.dia > 90) healthScore -= 20;
+                else if (latestVitals.sys < 90 || latestVitals.dia < 60) healthScore -= 25;
+                if (latestVitals.sugar > 180) healthScore -= 15;
+                if (latestVitals.hr > 100 || (latestVitals.hr > 0 && latestVitals.hr < 50)) healthScore -= 10;
+                healthScore -= weeklyFalls.length * 10;
+
+                const takenMeds = reminders.filter(function (r) { return r.lastTaken; }).length;
+                const medAdherence = reminders.length > 0 ? (takenMeds / reminders.length) * 100 : 100;
+                if (medAdherence < 80) healthScore -= 15;
+
+                healthScore = Math.max(0, healthScore);
+
+                let healthStatus = "Excellent";
+                let statusColor = [39, 174, 96];
+                if (healthScore < 90) { healthStatus = "Good"; statusColor = [52, 152, 219]; }
+                if (healthScore < 75) { healthStatus = "Fair"; statusColor = [243, 156, 18]; }
+                if (healthScore < 60) { healthStatus = "Needs Attention"; statusColor = [231, 76, 60]; }
+
+                console.log('Health score calculated:', healthScore);
+
+                // ==== PAGE 1: OVERVIEW ====
+
+                // Header
+                doc.setFillColor(46, 204, 113);
+                doc.rect(0, 0, 210, 45, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(24);
+                doc.text("COMPREHENSIVE HEALTH REPORT", 105, 22, { align: 'center' });
+                doc.setFontSize(11);
+                doc.text("Elder Care Monitoring & Intelligence System", 105, 32, { align: 'center' });
+                doc.text("Generated: " + now.toLocaleString(), 105, 38, { align: 'center' });
+
+                let y = 55;
+
+                // Patient Information
+                doc.setFillColor(245, 245, 245);
+                doc.rect(15, y, 180, 40, 'F');
+                doc.setDrawColor(46, 204, 113);
+                doc.setLineWidth(0.5);
+                doc.rect(15, y, 180, 40, 'S');
+
+                doc.setTextColor(50, 50, 50);
+                doc.setFontSize(14);
+                doc.text("PATIENT INFORMATION", 20, y + 8);
+                doc.setFontSize(11);
+                doc.text("Name: " + (profile.name || 'N/A'), 20, y + 16);
+                doc.text("Age: " + (profile.age || 'N/A'), 20, y + 23);
+                doc.text("Gender: " + (profile.gender || 'Not specified'), 20, y + 30);
+                doc.text("Conditions: " + (profile.conditions || 'None'), 20, y + 37);
+
+                const hospitalName = appointments.length > 0 ? appointments[0].hospital : 'Not specified';
+                doc.text("Hospital: " + hospitalName, 110, y + 16);
+                doc.text("Contact: " + (profile.emergencyContact || 'Not set'), 110, y + 23);
+                doc.text("Blood: " + (profile.bloodGroup || 'Not set'), 110, y + 30);
+
+                y += 50;
+
+                // Health Score Card
+                doc.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
+                doc.rect(15, y, 85, 35, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(14);
+                doc.text("HEALTH SCORE", 57.5, y + 10, { align: 'center' });
+                doc.setFontSize(32);
+                doc.text(healthScore + "%", 57.5, y + 24, { align: 'center' });
+                doc.setFontSize(12);
+                doc.text(healthStatus, 57.5, y + 32, { align: 'center' });
+
+                // Week Summary
+                doc.setFillColor(245, 245, 245);
+                doc.rect(110, y, 85, 35, 'F');
+                doc.setDrawColor(200);
+                doc.rect(110, y, 85, 35, 'S');
+                doc.setTextColor(50);
+                doc.setFontSize(10);
+                doc.text("WEEKLY SUMMARY", 152.5, y + 8, { align: 'center' });
+                doc.setFontSize(9);
+                doc.text("Vitals: " + weeklyData.length, 115, y + 16);
+                doc.text("Falls: " + weeklyFalls.length, 115, y + 22);
+                doc.text("Meds: " + medAdherence.toFixed(0) + "%", 115, y + 28);
+
+                y += 45;
+
+                // Vital Signs Section
+                doc.setFontSize(16);
+                doc.setTextColor(46, 204, 113);
+                doc.text("1. VITAL SIGNS (Last 7 Days)", 15, y);
+                y += 8;
+
+                // Try to add chart
+                try {
+                    const canvas = document.getElementById('healthChart');
+                    if (canvas) {
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = canvas.width;
+                        tempCanvas.height = canvas.height;
+                        const ctx = tempCanvas.getContext('2d');
+                        ctx.fillStyle = "#FFFFFF";
+                        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                        ctx.drawImage(canvas, 0, 0);
+                        const imgData = tempCanvas.toDataURL('image/jpeg', 1.0);
+                        doc.addImage(imgData, 'JPEG', 15, y, 180, 75);
+                        y += 80;
+                        console.log('Chart added successfully');
+                    }
+                } catch (chartError) {
+                    console.warn('Chart capture failed:', chartError);
+                    doc.setFontSize(10);
+                    doc.setTextColor(150);
+                    doc.text("Chart unavailable", 20, y);
+                    y += 10;
+                }
+
+                // Latest reading
+                if (latestVitals.sys) {
+                    doc.setFontSize(12);
+                    doc.setTextColor(50);
+                    doc.text("Latest:", 15, y);
+                    doc.setFontSize(10);
+                    y += 6;
+                    doc.text("BP: " + latestVitals.sys + "/" + latestVitals.dia + " | HR: " + (latestVitals.hr || '-') + " | Sugar: " + (latestVitals.sugar || '-') + " mg/dL", 15, y);
+                    y += 8;
+                }
+
+                // ==== PAGE 2: DETAILS ====
+                doc.addPage();
+                y = 20;
+
+                // Medications
+                doc.setFontSize(16);
+                doc.setTextColor(46, 204, 113);
+                doc.text("2. MEDICATIONS (Weekly)", 15, y);
+                y += 10;
+
+                doc.setFontSize(10);
+                doc.setTextColor(50);
+
+                if (reminders.length === 0) {
+                    doc.text("No medicines scheduled", 15, y);
+                    y += 10;
+                } else {
+                    // Table header
+                    doc.setFillColor(46, 204, 113);
+                    doc.rect(15, y, 180, 8, 'F');
+                    doc.setTextColor(255);
+                    doc.setFontSize(9);
+                    doc.text("Name", 20, y + 6);
+                    doc.text("Dosage", 80, y + 6);
+                    doc.text("Time", 120, y + 6);
+                    doc.text("Status", 155, y + 6);
+                    y += 10;
+
+                    // Rows
+                    doc.setTextColor(50);
+                    for (var i = 0; i < reminders.length; i++) {
+                        var r = reminders[i];
+                        var bg = i % 2 === 0 ? [255, 255, 255] : [245, 245, 245];
+                        doc.setFillColor(bg[0], bg[1], bg[2]);
+                        doc.rect(15, y - 2, 180, 8, 'F');
+
+                        doc.text(r.name, 20, y + 4);
+                        doc.text(r.dosage, 80, y + 4);
+                        doc.text(r.time, 120, y + 4);
+
+                        var status = r.lastTaken === r.time ? "TAKEN" : "PENDING";
+                        var color = status === "TAKEN" ? [39, 174, 96] : [231, 76, 60];
+                        doc.setTextColor(color[0], color[1], color[2]);
+                        doc.text(status, 155, y + 4);
+                        doc.setTextColor(50);
+
+                        y += 8;
+                    }
+
+                    y += 5;
+                    doc.setFontSize(11);
+                    doc.text("Adherence: " + medAdherence.toFixed(1) + "%", 15, y);
+                    y += 15;
+                }
+
+                // Falls
+                doc.setFontSize(16);
+                doc.setTextColor(46, 204, 113);
+                doc.text("3. FALL DETECTION (7 Days)", 15, y);
+                y += 10;
+
+                doc.setFontSize(10);
+                if (weeklyFalls.length === 0) {
+                    doc.setTextColor(39, 174, 96);
+                    doc.text("No falls detected - Excellent!", 15, y);
+                    y += 10;
+                } else {
+                    doc.setTextColor(231, 76, 60);
+                    doc.text("WARNING: " + weeklyFalls.length + " falls detected", 15, y);
+                    y += 8;
+                    doc.setTextColor(50);
+                    for (var j = 0; j < Math.min(5, weeklyFalls.length); j++) {
+                        var fall = weeklyFalls[j];
+                        doc.text("  " + new Date(fall.time || fall.timestamp).toLocaleString(), 20, y);
+                        y += 6;
+                    }
+                }
+
+                y += 10;
+
+                // Appointments
+                doc.setFontSize(16);
+                doc.setTextColor(46, 204, 113);
+                doc.text("4. APPOINTMENTS", 15, y);
+                y += 10;
+
+                doc.setFontSize(10);
+                doc.setTextColor(50);
+
+                if (appointments.length === 0) {
+                    doc.text("No appointments scheduled", 15, y);
+                } else {
+                    for (var k = 0; k < appointments.length; k++) {
+                        var apt = appointments[k];
+                        doc.text("  " + apt.hospital + " - " + apt.time + " [" + apt.status + "]", 20, y);
+                        y += 6;
+                    }
+                }
+
+                // Footer
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                doc.text("Confidential Report - Elder Care AI System", 105, 285, { align: 'center' });
+                doc.text("Report ID: " + Date.now(), 105, 290, { align: 'center' });
+
+                console.log('Saving PDF...');
+                doc.save("Health_Report_" + (profile.name || 'Elder') + "_" + now.toISOString().split('T')[0] + ".pdf");
+                console.log('PDF saved successfully!');
+
+            } catch (error) {
+                console.error('PDF ERROR:', error);
+                console.error('Error details:', error.message);
+                console.error('Stack:', error.stack);
+                alert('PDF Error: ' + error.message + '\n\nPlease press F12 and check the Console tab for details.');
+            }
+        }
+        const profile = JSON.parse(localStorage.getItem('elderProfile') || '{}');
+        const data = getHealthData();
+        const reminders = JSON.parse(localStorage.getItem('elderReminders') || '[]');
+        const appointments = JSON.parse(localStorage.getItem('elderAppointments') || '[]');
+        const falls = JSON.parse(localStorage.getItem('elderFalls') || '[]');
+        const notifications = JSON.parse(localStorage.getItem('elderNotifications') || '[]');
+
+        // Calculate date range
+        const now = new Date();
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const weeklyData = data.filter(function (d) { return new Date(d.timestamp) >= weekAgo; });
+        const weeklyFalls = falls.filter(function (f) { return new Date(f.time || f.timestamp) >= weekAgo; });
+
+        // Calculate Health Score
+        let healthScore = 100;
+        const latestVitals = data[data.length - 1] || {};
+
+        if (latestVitals.sys > 140 || latestVitals.dia > 90) healthScore -= 20;
+        else if (latestVitals.sys < 90 || latestVitals.dia < 60) healthScore -= 25;
+        if (latestVitals.sugar > 180) healthScore -= 15;
+        if (latestVitals.hr > 100 || (latestVitals.hr > 0 && latestVitals.hr < 50)) healthScore -= 10;
+        healthScore -= weeklyFalls.length * 10;
+
+        const takenMeds = reminders.filter(function (r) { return r.lastTaken; }).length;
+        const medAdherence = reminders.length > 0 ? (takenMeds / reminders.length) * 100 : 100;
+        if (medAdherence < 80) healthScore -= 15;
+
+        healthScore = Math.max(0, healthScore);
+
+        let healthStatus = "Excellent";
+        let statusColor = [39, 174, 96];
+        if (healthScore < 90) { healthStatus = "Good"; statusColor = [52, 152, 219]; }
+        if (healthScore < 75) { healthStatus = "Fair"; statusColor = [243, 156, 18]; }
+        if (healthScore < 60) { healthStatus = "Needs Attention"; statusColor = [231, 76, 60]; }
+
+        // PAGE 1: OVERVIEW
+        doc.setFillColor(46, 204, 113);
+        doc.rect(0, 0, 210, 45, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.text("COMPREHENSIVE HEALTH REPORT", 105, 22, { align: 'center' });
+        doc.setFontSize(11);
+        doc.text("Elder Care Monitoring & Intelligence System", 105, 32, { align: 'center' });
+        doc.text("Report Generated: " + now.toLocaleString(), 105, 38, { align: 'center' });
+
+        let y = 55;
+
+        // Patient Box
+        doc.setFillColor(245, 245, 245);
+        doc.rect(15, y, 180, 40, 'F');
+        doc.setDrawColor(46, 204, 113);
+        doc.setLineWidth(0.5);
+        doc.rect(15, y, 180, 40, 'S');
+
+        doc.setTextColor(50, 50, 50);
+        doc.setFontSize(14);
+        doc.text("PATIENT INFORMATION", 20, y + 8);
+        doc.setFontSize(11);
+        doc.text("Name: " + (profile.name || 'N/A'), 20, y + 16);
+        doc.text("Age: " + (profile.age || 'N/A'), 20, y + 23);
+        doc.text("Gender: " + (profile.gender || 'Not specified'), 20, y + 30);
+        doc.text("Medical Conditions: " + (profile.conditions || 'None reported'), 20, y + 37);
+
+        const hospitalName = appointments.length > 0 ? appointments[0].hospital : 'Not specified';
+        doc.text("Primary Care Hospital: " + hospitalName, 110, y + 16);
+        doc.text("Emergency Contact: " + (profile.emergencyContact || 'Not set'), 110, y + 23);
+        doc.text("Blood Group: " + (profile.bloodGroup || 'Not set'), 110, y + 30);
+
+        y += 50;
+
+        // Health Score
+        doc.setFillColor.apply(doc, statusColor);
+        doc.rect(15, y, 85, 35, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(14);
+        doc.text("OVERALL HEALTH SCORE", 57.5, y + 10, { align: 'center' });
+        doc.setFontSize(32);
+        doc.text(healthScore + "%", 57.5, y + 24, { align: 'center' });
+        doc.setFontSize(12);
+        doc.text(healthStatus, 57.5, y + 32, { align: 'center' });
+
+        // Quick Stats
+        doc.setFillColor(245, 245, 245);
+        doc.rect(110, y, 85, 35, 'F');
+        doc.setDrawColor(200);
+        doc.rect(110, y, 85, 35, 'S');
+        doc.setTextColor(50);
+        doc.setFontSize(10);
+        doc.text("WEEKLY SUMMARY", 152.5, y + 8, { align: 'center' });
+        doc.setFontSize(9);
+        doc.text("Vitals Logged: " + weeklyData.length, 115, y + 16);
+        doc.text("Falls Detected: " + weeklyFalls.length, 115, y + 22);
+        doc.text("Med Adherence: " + medAdherence.toFixed(0) + "%", 115, y + 28);
+
+        y += 45;
+
+        // Vital Signs
+        doc.setFontSize(16);
+        doc.setTextColor(46, 204, 113);
+        doc.text("1. VITAL SIGNS ANALYSIS (Last 7 Days)", 15, y);
+        y += 8;
+
+        // Chart image
+        try {
+            const canvas = document.getElementById('healthChart');
+            const newCanvas = document.createElement('canvas');
+            newCanvas.width = canvas.width;
+            newCanvas.height = canvas.height;
+            const ctx = newCanvas.getContext('2d');
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+            ctx.drawImage(canvas, 0, 0);
+            const imgData = newCanvas.toDataURL('image/jpeg', 1.0);
+            doc.addImage(imgData, 'JPEG', 15, y, 180, 75);
+            y += 80;
+        } catch (e) {
+            console.error('Chart capture error:', e);
+            doc.setFontSize(10);
+            doc.setTextColor(150);
+            doc.text("Chart visualization unavailable", 20, y);
+            y += 10;
+        }
+
+        // Latest vitals
+        if (latestVitals.sys) {
+            doc.setFontSize(12);
+            doc.setTextColor(50);
+            doc.text("Latest Reading:", 15, y);
+            doc.setFontSize(10);
+            y += 6;
+            doc.text("BP: " + latestVitals.sys + "/" + latestVitals.dia + " mmHg | HR: " + (latestVitals.hr || 'N/A') + " bpm | Sugar: " + (latestVitals.sugar || 'N/A') + " mg/dL", 15, y);
+            y += 8;
+        }
+
+        // PAGE 2: MEDICATIONS
+        doc.addPage();
+        y = 20;
+
+        doc.setFontSize(16);
+        doc.setTextColor(46, 204, 113);
+        doc.text("2. MEDICATION ADHERENCE & WEEKLY HISTORY", 15, y);
+        y += 10;
+
+        doc.setFontSize(10);
+        doc.setTextColor(50);
+
+        if (reminders.length === 0) {
+            doc.text("No medicines currently scheduled.", 15, y);
+            y += 10;
+        } else {
+            // Table header
+            doc.setFillColor(46, 204, 113);
+            doc.rect(15, y, 180, 8, 'F');
+            doc.setTextColor(255);
+            doc.setFontSize(9);
+            doc.text("Medicine Name", 20, y + 6);
+            doc.text("Dosage", 80, y + 6);
+            doc.text("Time", 120, y + 6);
+            doc.text("Status", 155, y + 6);
+            y += 10;
+
+            // Medicine rows
+            doc.setTextColor(50);
+            reminders.forEach(function (r, idx) {
+                const bgColor = idx % 2 === 0 ? [255, 255, 255] : [245, 245, 245];
+                doc.setFillColor.apply(doc, bgColor);
+                doc.rect(15, y - 2, 180, 8, 'F');
+
+                doc.text(r.name, 20, y + 4);
+                doc.text(r.dosage, 80, y + 4);
+                doc.text(r.time, 120, y + 4);
+
+                const status = r.lastTaken === r.time ? "TAKEN" : "PENDING";
+                const color = status === "TAKEN" ? [39, 174, 96] : [231, 76, 60];
+                doc.setTextColor.apply(doc, color);
+                doc.text(status, 155, y + 4);
+                doc.setTextColor(50);
+
+                y += 8;
+            });
+
+            y += 5;
+            doc.setFontSize(11);
+            doc.text("Weekly Adherence Rate: " + medAdherence.toFixed(1) + "%", 15, y);
+            doc.setFontSize(9);
+            doc.setTextColor(100);
+            doc.text("(" + takenMeds + " out of " + reminders.length + " scheduled medicines taken)", 15, y + 6);
+            y += 15;
+        }
+
+        // Fall Detection
+        doc.setFontSize(16);
+        doc.setTextColor(46, 204, 113);
+        doc.text("3. FALL DETECTION & SAFETY ALERTS (Last 7 Days)", 15, y);
+        y += 10;
+
+        doc.setFontSize(10);
+        doc.setTextColor(50);
+
+        if (weeklyFalls.length === 0) {
+            doc.setTextColor(39, 174, 96);
+            doc.text("No falls detected this week. Patient safety status: Excellent.", 15, y);
+            y += 10;
+        } else {
+            doc.setTextColor(231, 76, 60);
+            doc.text(weeklyFalls.length + " Fall(s) Detected This Week", 15, y);
+            y += 8;
+            doc.setTextColor(50);
+
+            weeklyFalls.slice(0, 5).forEach(function (f) {
+                const fallTime = new Date(f.time || f.timestamp).toLocaleString();
+                doc.text("  " + fallTime + " - " + (f.location || 'Location not specified'), 20, y);
+                y += 6;
+            });
+            y += 5;
+        }
+
+        // SOS Alerts
+        doc.setFontSize(16);
+        doc.setTextColor(46, 204, 113);
+        doc.text("4. EMERGENCY ALERTS & SOS HISTORY", 15, y);
+        y += 10;
+
+        const sosAlerts = notifications.filter(function (n) { return n.type === 'sos' || (n.title && n.title.includes('SOS')); });
+        const recentSOS = sosAlerts.slice(0, 5);
+
+        doc.setFontSize(10);
+        doc.setTextColor(50);
+
+        if (recentSOS.length === 0) {
+            doc.setTextColor(39, 174, 96);
+            doc.text("No SOS alerts triggered recently.", 15, y);
+        } else {
+            recentSOS.forEach(function (alert) {
+                const alertTime = new Date(alert.time).toLocaleString();
+                doc.setTextColor(231, 76, 60);
+                doc.text("  " + alertTime + ": " + alert.message, 20, y);
+                y += 6;
+            });
+        }
+
+        y += 10;
+
+        // Appointments
+        doc.setFontSize(16);
+        doc.setTextColor(46, 204, 113);
+        doc.text("5. UPCOMING APPOINTMENTS & CARE PLAN", 15, y);
+        y += 10;
+
+        doc.setFontSize(10);
+        doc.setTextColor(50);
+
+        if (appointments.length === 0) {
+            doc.text("No upcoming appointments scheduled.", 15, y);
+        } else {
+            appointments.forEach(function (a) {
+                doc.text("  " + a.hospital + " - " + a.time + " [" + a.status + "]", 20, y);
+                y += 6;
+            });
+        }
+
+        // Footer
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text("This report is confidential and generated by Elder Care AI Monitoring System", 105, 285, { align: 'center' });
+        doc.text("Page 2 of 2 | Report ID: " + Date.now(), 105, 290, { align: 'center' });
+
+        // Save
+        doc.save("Comprehensive_Health_Report_" + (profile.name || 'Elder') + "_" + now.toISOString().split('T')[0] + ".pdf");
+
+            } catch (error) {
+            console.error('PDF Generation Error:', error);
+            alert('Error generating PDF report. Please check the browser console for details.');
+        }
+        }
+    </script>
+</body>
+
+</html>

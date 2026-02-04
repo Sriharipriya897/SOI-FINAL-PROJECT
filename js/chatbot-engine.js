@@ -46,6 +46,20 @@ class ElderCareChatbot {
         localStorage.setItem(`activeSessionId_${this.currentUserRole}`, this.activeSessionId);
     }
 
+    // New helper to prevent crashes from malformed storage
+    safeGet(key, fallback = []) {
+        try {
+            const data = localStorage.getItem(key);
+            if (!data) return fallback;
+            const parsed = JSON.parse(data);
+            if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
+            return parsed;
+        } catch (e) {
+            console.warn(`[Intelligence] Data corrupted for key: ${key}. Using fallback.`);
+            return fallback;
+        }
+    }
+
     startNewSession() {
         const newId = 'session_' + Date.now();
         const newSession = {
@@ -130,6 +144,10 @@ class ElderCareChatbot {
         console.log(`[Intelligence] History cleared for role: ${this.currentUserRole}`);
     }
 
+    getRole() {
+        return this.currentUserRole;
+    }
+
     setRole(role) {
         if (['elder', 'caregiver', 'hospital'].includes(role)) {
             this.currentUserRole = role;
@@ -168,21 +186,21 @@ class ElderCareChatbot {
     }
 
     getUserProfile() {
-        const profile = JSON.parse(localStorage.getItem('elderProfile') || '{}');
+        const profile = this.safeGet('elderProfile', {});
         return {
-            name: profile.name || 'User',
-            age: profile.age || 'Not set',
-            conditions: profile.conditions || 'None'
+            name: String(profile.name || 'User'),
+            age: String(profile.age || 'Not set'),
+            conditions: String(profile.conditions || 'None')
         };
     }
 
     getObjectDetectionStatus() {
-        let objects = JSON.parse(localStorage.getItem('elderDetectedObjects') || '[]');
+        let objects = this.safeGet('elderDetectedObjects', []);
         let lastDetection = localStorage.getItem('elderLastDetectionTime');
         let isRecent = false;
 
         if (objects.length === 0) {
-            const recent = JSON.parse(localStorage.getItem('elderRecentObjects') || '[]');
+            const recent = this.safeGet('elderRecentObjects', []);
             const recentTime = localStorage.getItem('elderRecentTime');
             if (recent.length > 0 && recentTime) {
                 const diff = (new Date() - new Date(recentTime)) / 60000;
@@ -216,14 +234,14 @@ class ElderCareChatbot {
     }
 
     getMedicineSchedule() {
-        const reminders = JSON.parse(localStorage.getItem('elderReminders') || '[]');
+        const reminders = this.safeGet('elderReminders', []);
         const now = new Date();
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        const dueNow = reminders.filter(r => r.time.substring(0, 5) === currentTime);
+        const dueNow = reminders.filter(r => r && typeof r.time === 'string' && r.time.substring(0, 5) === currentTime);
 
         return {
             dueNow: dueNow,
-            allToday: reminders.sort((a, b) => a.time.localeCompare(b.time))
+            allToday: [...reminders].sort((a, b) => (a.time || '').localeCompare(b.time || ''))
         };
     }
 
@@ -235,7 +253,7 @@ class ElderCareChatbot {
             fallDetection: this.getFallDetectionStatus(),
             sosStatus: this.getSOSStatus(),
             medicineSchedule: this.getMedicineSchedule(),
-            appointments: JSON.parse(localStorage.getItem('elderAppointments') || '[]'),
+            appointments: this.safeGet('elderAppointments', []),
             settings: typeof getSettings !== 'undefined' ? getSettings() : { lang: 'en' },
             currentUserRole: this.currentUserRole
         };
@@ -257,13 +275,16 @@ ROLE: ELDER COMPANION
 ROLE: CAREGIVER ASSISTANT
 - Focus: Reporting, data analysis, and elder safety status.
 - TONE: Professional, supportive, fact-based. 
-- SPECIAL: Your job is to answer the caregiver's questions about the elder's wellbeing. Report on meds, falls, and current activity status clearly.`;
+- SPECIAL: Your job is to answer the caregiver's questions about the elder's wellbeing. Report on meds, falls, and current activity status clearly.
+- ACTION: If the caregiver asks to remind the elder about medicine, USE the ADD_MEDICINE command.
+- HEALTH REPORTS: If the caregiver asks for a health report, health data, or wants to see vitals/trends, USE the GENERATE_HEALTH_REPORT command.`;
         } else if (context.currentUserRole === 'hospital') {
             roleSection = `
 ROLE: CLINICAL INTELLIGENCE (Doctor/Nurse)
 - Focus: Medical data, adherence trends, and clinical summaries.
 - TONE: Professional, efficient, clinical, and data-driven.
-- SPECIAL: Provide concise medical summaries. Avoid fluff. Focus on fall history and medication adherence percentages if asked.`;
+- SPECIAL: Provide concise medical summaries. Avoid fluff. Focus on fall history and medication adherence percentages if asked.
+- ACTION: If the doctor prescribes a medicine, immediately USE the ADD_MEDICINE command to sync it to the elder's device.`;
         }
 
         const prompt = `You are the ONE Unified Elder Care Companion AI serving three roles with SHARED memory.
@@ -277,19 +298,37 @@ GLOBAL RULES:
 - If uncertain, say: "Please wait, I am checking."
 - TONE: Always reassuring (except more clinical for Hospital).
 - SHARED STATE: All medicines, SOS events, and falls are shared across all roles immediately.
+- MEDICINES: The elder currently has these medicines scheduled: ${context.medicineSchedule.allToday.map(m => `${m.name} (${m.time})`).join(', ') || 'None'}.
+
+DIET & MEDICAL ADVICE PROTOCOL:
+- CRITICAL: You MUST tailor all food/diet advice to the elder's specific conditions: "${context.profile.conditions}".
+- If Condition is "Diabetes": STRICTLY suggest low-glycemic index foods, avoid sugar, reduce carbs. Suggest: Leafy greens, whole grains, nuts.
+- If Condition is "Hypertension" (BP): STRICTLY suggest low-sodium (low salt) foods. Avoid processed foods/pickles.
+- If users asks for a "Whole Day" or "Full" diet plan, provide a structured list: Breakfast, Lunch, Snack, Dinner.
+- ALWAYS warn: "Please consult your real doctor before making major changes."
+
+LIFESTYLE & FITNESS PROTOCOL:
+- PROACTIVELY suggest simple, age-appropriate exercises: "Have you tried 10 mins of walking today?" or "Simple Chair Yoga is great/safe/effective."
+- MEDICINES: If asked about specific meds, explain what they are generally for.
+- GENERAL HEALTH: Provide tips on Hydration, Sleep schedule, and Stress management.
+- MOTIVATION: Be encouraging! "You can do it!", "Small steps help a lot."
 
 CURRENT SYSTEM CONTEXT (ELDER'S STATUS):
 - SOS Status: ${context.sosStatus}
 - Fall Status: ${context.fallDetection.status}
 - Detected Objects: ${context.objectDetection.objects.join(', ') || 'None'}
-- Medicines Scheduled: ${context.medicineSchedule.allToday.map(m => `${m.name} (${m.time})`).join(', ') || 'None'}
 - Appointments: ${context.appointments.length > 0 ? context.appointments[0].time + ' at ' + context.appointments[0].hospital : 'None'}
 
 COMMANDS:
-COMMAND:[{"type": "ACTION", "payload": {}}]
-Actions: OPEN_PAGE, ADD_MEDICINE, TRIGGER_SOS, BOOK_APPOINTMENT, GENERATE_REPORT.
+COMMAND:[{"type": "ACTION", "payload": {...}}]
+Available Actions & Payload Requirements:
+- OPEN_PAGE: {"page": "object-detection" | "fall-detection" | "medicine" | "hospital" | "sos"}
+- ADD_MEDICINE: {"name": "Med Name", "time": "HH:MM", "dosage": "e.g. 1 tab"}
+- TRIGGER_SOS: {"reason": "string"}
+- BOOK_APPOINTMENT: {"hospital": "Hospital Name", "time": "HH:MM"}
+- GENERATE_HEALTH_REPORT: {} (Generates downloadable PDF health report with vitals, charts, and medicine history)
 
-${isProactive ? "INSTRUCTION: You are initiating a proactive check. Keep it role-appropriate." : "INSTRUCTION: Respond to the current user's request."}`;
+${isProactive ? "INSTRUCTION: You are initiating a proactive check. Keep it role-appropriate." : "INSTRUCTION: Respond to the current user's request. If they ask about food, provide a specific, medically-appropriate list based on their condition."}`;
 
         return prompt;
     }
@@ -320,7 +359,7 @@ ${isProactive ? "INSTRUCTION: You are initiating a proactive check. Keep it role
             if (role === 'caregiver' || role === 'hospital') {
                 const isSafetyCheck = /(safe|okay|status|condition|நிலைமை|பாதுகாப்பான)/i.test(text);
                 const isMedCheck = /(upcoming|next|what|when|is|any)/i.test(text) && /(medicine|pill|meds|மருந்து)/i.test(text);
-                const isObjectCheck = /(object|thing|see|camera|பொருள்)/i.test(text);
+                const isObjectCheck = /(object|thing|camera|பொருள்)/i.test(text);
                 const isFallCheck = /(fall|fell|drop|விழுந்த)/i.test(text);
 
                 if (isSafetyCheck) {
@@ -333,9 +372,12 @@ ${isProactive ? "INSTRUCTION: You are initiating a proactive check. Keep it role
                     const now = new Date();
                     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
                     const upcoming = context.medicineSchedule.allToday.find(m => m.time >= currentTime);
+                    const allMeds = context.medicineSchedule.allToday.map(m => `${m.name} (${m.time})`).join(', ');
 
                     if (upcoming) {
-                        return `The upcoming medicine for ${context.profile.name} is ${upcoming.name} at ${upcoming.time}.`;
+                        return `The upcoming medicine for ${context.profile.name} is ${upcoming.name} at ${upcoming.time}. Full List: ${allMeds}`;
+                    } else if (allMeds) {
+                        return `No more medicines today. Scheduled were: ${allMeds}`;
                     }
                     return `There are no further medicines scheduled for ${context.profile.name} today.`;
                 }
@@ -369,13 +411,75 @@ ${isProactive ? "INSTRUCTION: You are initiating a proactive check. Keep it role
                 }
             }
 
+            // --- 3. COMMON CHIT-CHAT (INSTANT RESPONSE) ---
+            // Bypass API for simple interactions to ensure <100ms response time
+            // FIX: Added word boundaries \b to prevent partial matches (e.g. 'this' triggering 'hi')
+            const greetings = /\b(hi|hello|hey|greetings|vanakkam|namaste|ஹலோ|வணக்கம்)\b/i;
+            const howAreYou = /(how are you|how do you do|how is it going|எப்படி இருக்கிறீர்கள்|சௌக்கியமா)/i;
+            const identity = /(who are you|what is your name|uyir|antigravity|யார் நீ|உன் பெயர் என்ன)/i;
+            const gratitude = /(thank|thanks|nandri|நன்றி)/i;
+            const timeQuery = /(time|date|samyam|what is the time|மணி என்ன|தேதி)/i;
+            const helpQuery = /(help|support|assist|uthavi|உதவி)/i;
+
+            if (greetings.test(text)) {
+                const partOfDay = this.getTimeOfDay();
+                const name = context.profile.name.split(' ')[0] || 'friend';
+                return (language === 'ta')
+                    ? `வணக்கம் ${name}! நான் உங்களுக்கு எப்படி உதவ முடியும்?`
+                    : `Hello ${name}! Good ${partOfDay}. I am here for you.`;
+            }
+
+            if (howAreYou.test(text)) {
+                return (language === 'ta')
+                    ? "நான் நலமாக இருக்கிறேன், நன்றி! உங்கள் உடல்நிலை எப்படி இருக்கிறது?"
+                    : "I am functioning perfectly, thank you! How are you feeling right now?";
+            }
+
+            if (identity.test(text)) {
+                return (language === 'ta')
+                    ? "நான் உங்கள் முதியோர் பராமரிப்பு உதவியாளர். உங்களை பாதுகாப்பதே என் வேலை."
+                    : "I am your Elder Care Companion. My goal is to keep you safe and healthy.";
+            }
+
+            if (gratitude.test(text)) {
+                return (language === 'ta')
+                    ? "மிக்க மகிழ்ச்சி. எப்போதும் உதவி செய்ய தயாராக இருக்கிறேன்."
+                    : "You are very welcome! I am always here to help.";
+            }
+
+            if (timeQuery.test(text)) {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const dateStr = now.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+                // If user specifically asks for date (and not just time)
+                if (/(date|தேதி)/i.test(text)) {
+                    return (language === 'ta')
+                        ? `இன்று: ${dateStr}`
+                        : `Today is ${dateStr}.`;
+                }
+
+                return (language === 'ta')
+                    ? `தற்போதைய நேரம்: ${timeStr}. (${dateStr})`
+                    : `It is currently ${timeStr} on ${dateStr}.`;
+            }
+
             // 2. TOOL NAVIGATION DETECTION
             const isNavQuery = /(open|go to|show|tira|sel|திற|செல்)/i.test(text);
             const isObjectQuery = /(object|thing|camera|பொருள்)/i.test(text);
             const isFallQuery = /(fall|fell|dropped|வீழ்ச்சி|விழுந்த)/i.test(text);
             const isMedicineQuery = /(medicine|pill|meds|tablet|dose|into|மருந்து)/i.test(text);
+            const isHealthReportQuery = /(health|report|pdf|vitals|data|trends)/i.test(text);
 
-            if (isNavQuery || isObjectQuery || isFallQuery || isMedicineQuery) {
+            if (isNavQuery || isObjectQuery || isFallQuery || isMedicineQuery || isHealthReportQuery) {
+                // Health Report PDF Request (All Roles)
+                if (isHealthReportQuery && /(report|pdf|download|give|provide)/i.test(text)) {
+                    this.executeCommands([{ type: 'GENERATE_HEALTH_REPORT', payload: {} }]);
+                    return language === 'ta' ?
+                        "சரி, நான் ஒரு விரிவான ஆரோக்கிய அறிக்கையை PDF வடிவத்தில் உருவாக்குகிறேன். சில விநாடிகள் காத்திருங்கள்..." :
+                        "Understood. I am generating a comprehensive health report PDF for you. Please wait a moment...";
+                }
+
                 if (isObjectQuery && (isNavQuery || text.includes('detection'))) {
                     this.executeCommands([{ type: 'OPEN_PAGE', payload: { page: 'object-detection' } }]);
                     return language === 'ta' ? "பொருள் அறிதல் பக்கத்தைத் திறக்கிறேன்." : "Opening Object Detection page now.";
@@ -407,7 +511,10 @@ ${isProactive ? "INSTRUCTION: You are initiating a proactive check. Keep it role
             if (!isProactive && userMessage) {
                 const instant = await this.getInstantResponse(userMessage, language);
                 if (instant) {
-                    if (!isProactive) this.conversationHistory.push({ user: userMessage, bot: instant });
+                    if (!isProactive) {
+                        this.conversationHistory.push({ user: userMessage, bot: instant });
+                        this.saveHistory();
+                    }
                     return instant;
                 }
             }
@@ -423,60 +530,97 @@ ${isProactive ? "INSTRUCTION: You are initiating a proactive check. Keep it role
             });
 
             const promptInput = isProactive
-                ? `${systemPrompt}\n\nACTION: Generate proactive safety message. If command needed, append tag.`
-                : `${systemPrompt}\n\nCONVERSATION HISTORY:\n${historyText}\nUser: ${userMessage}\n\nAssistant:`;
+                ? `${systemPrompt}\n\nACTION: Generate proactive safety message (Max 15 words).`
+                : `${systemPrompt}\n\nCONVERSATION HISTORY:\n${historyText}\nUser: ${userMessage}\n\nAssistant (Provide a helpful, complete response):`;
+
+            // Broad regex to catch almost any content request
+            const isDetailedRequest = /(diet|food|plan|eat|meal|breakfast|lunch|dinner|unavu|sappadu|tip|yoga|exercise|walking|medicine|health|disease|symptom|workout|fitness|gym|habit|routine|diabetes|sugar|bp|pressure|safe)/i.test(userMessage);
+
+            let maxTokens = 600;
+            let finalPrompt = promptInput;
+
+            if (isDetailedRequest) {
+                maxTokens = 1500; // Balanced limit for detailed plans
+                finalPrompt = `${systemPrompt}\n\nCONVERSATION HISTORY:\n${historyText}\nUser: ${userMessage}\n\nAssistant (INSTRUCTION: Provide a helpful, structured response with bullet points. Be thorough but avoid unnecessary fluff.):`;
+            }
 
             const model = (typeof CONFIG !== 'undefined' && CONFIG.getModel) ? CONFIG.getModel() : 'gemini-1.5-flash';
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: promptInput }] }],
-                    generationConfig: { temperature: 0.7, maxOutputTokens: 500 }
-                })
-            });
+            // Add Time-out for faster failure feedback (15 seconds)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-            const data = await response.json();
-            if (data.error) throw new Error(data.error.message);
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: finalPrompt }] }],
+                        generationConfig: { temperature: 0.7, maxOutputTokens: maxTokens },
+                        safetySettings: [
+                            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+                            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+                            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+                            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" }
+                        ]
+                    }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
 
-            let aiResponse = data.candidates[0].content.parts[0].text.trim();
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
 
-            // Extract and Execute Commands
-            const commandMatch = aiResponse.match(/COMMAND:\[(.*?)\]/);
-            if (commandMatch) {
-                try {
-                    const commandJson = JSON.parse(`[${commandMatch[1]}]`);
-                    this.executeCommands(commandJson);
-                    aiResponse = aiResponse.replace(/COMMAND:\[.*?\]/g, '').trim();
-                } catch (e) {
-                    console.error("Command parsing error", e);
+                if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+                    return (language === 'ta') ? "மன்னிக்கவும், என்னால் பதில் அளிக்க முடியவில்லை." : "I'm sorry, I cannot respond right now.";
                 }
+
+                let aiResponse = data.candidates[0].content.parts[0].text.trim();
+
+                // Extract and Execute Commands
+                const commandMatch = aiResponse.match(/COMMAND:\[(.*?)\]/);
+                if (commandMatch) {
+                    try {
+                        const commandJson = JSON.parse(`[${commandMatch[1]}]`);
+                        this.executeCommands(commandJson);
+                        aiResponse = aiResponse.replace(/COMMAND:\[.*?\]/g, '').trim();
+                    } catch (e) { console.error("Command parsing error", e); }
+                }
+
+                if (!aiResponse && commandMatch) aiResponse = "I have processed your request.";
+
+                if (!isProactive) {
+                    this.conversationHistory.push({ user: userMessage, bot: aiResponse });
+                    this.saveHistory();
+                } else {
+                    this.lastProactiveMessage = aiResponse;
+                }
+
+                return aiResponse;
+
+            } catch (error) {
+                console.error("Chatbot API Error:", error);
+                if (error.name === 'AbortError') {
+                    return "I am taking too long to think. Please ask me again simply.";
+                }
+                throw error;
             }
-
-            if (!aiResponse && commandMatch) aiResponse = "I have processed your request.";
-
-            if (!isProactive) {
-                this.conversationHistory.push({ user: userMessage, bot: aiResponse });
-                this.saveHistory();
-            } else {
-                this.lastProactiveMessage = aiResponse;
-            }
-
-            return aiResponse;
         } catch (error) {
-            console.error('Chatbot Error:', error);
+            console.error('Chatbot System Error:', error);
             if (isProactive) return null; // Don't speak errors in background checks
-            const context = this.gatherSystemContext();
             return (language === 'ta') ? "மன்னிக்கவும், என்னால் இப்போது பதில் அளிக்க முடியவில்லை. ஆனால் நான் உங்களைக் கண்காணித்துக் கொண்டிருக்கிறேன்." : "I'm having a bit of trouble, but I am still watching over you.";
         }
     }
 
 
     executeCommands(commands) {
+        if (!Array.isArray(commands)) return;
+
         commands.forEach(cmd => {
             console.log("Executing Command:", cmd);
+            const payload = cmd.payload || {};
+
             switch (cmd.type) {
                 case 'OPEN_PAGE':
                     const pageMap = {
@@ -488,20 +632,24 @@ ${isProactive ? "INSTRUCTION: You are initiating a proactive check. Keep it role
                         'health': 'health.html',
                         'hospital': 'hospital.html'
                     };
-                    if (pageMap[cmd.payload.page]) {
-                        setTimeout(() => window.location.href = pageMap[cmd.payload.page], 1000);
+                    if (payload.page && pageMap[payload.page]) {
+                        setTimeout(() => window.location.href = pageMap[payload.page], 1000);
                     }
                     break;
 
                 case 'ADD_MEDICINE':
+                    if (!payload.name || !payload.time) break;
                     const reminders = JSON.parse(localStorage.getItem('elderReminders') || '[]');
                     reminders.push({
                         id: Date.now(),
-                        name: cmd.payload.name,
-                        time: cmd.payload.time,
-                        dosage: cmd.payload.dosage || '1 tablet'
+                        name: payload.name,
+                        time: payload.time,
+                        dosage: payload.dosage || '1 tablet'
                     });
                     localStorage.setItem('elderReminders', JSON.stringify(reminders));
+
+                    // Simple alert for prompt feedback
+                    if (typeof speak !== 'undefined') speak(`Saved medicine: ${payload.name} for ${payload.time}`);
                     break;
 
                 case 'TRIGGER_SOS':
@@ -512,14 +660,24 @@ ${isProactive ? "INSTRUCTION: You are initiating a proactive check. Keep it role
                     break;
 
                 case 'BOOK_APPOINTMENT':
+                    if (!payload.hospital || !payload.time) break;
                     const appointments = JSON.parse(localStorage.getItem('elderAppointments') || '[]');
                     appointments.push({
                         id: Date.now(),
-                        hospital: cmd.payload.hospital,
-                        time: cmd.payload.time,
+                        hospital: payload.hospital,
+                        time: payload.time,
                         status: 'Booked'
                     });
                     localStorage.setItem('elderAppointments', JSON.stringify(appointments));
+                    break;
+
+                case 'GENERATE_REPORT':
+                    setTimeout(() => window.location.href = 'hospital.html', 1000);
+                    break;
+
+                case 'GENERATE_HEALTH_REPORT':
+                    // Navigate to health.html with auto-download parameter
+                    setTimeout(() => window.location.href = 'health.html?autoDownload=true', 1000);
                     break;
             }
         });
@@ -567,7 +725,11 @@ ${isProactive ? "INSTRUCTION: You are initiating a proactive check. Keep it role
         // 4. Medicine Due Now
         if (context.medicineSchedule.dueNow.length > 0) {
             const medId = context.medicineSchedule.dueNow[0].id;
+            // Only trigger if alarm NOT playing (UI handles loop)
+            // But we need to update state so we don't spam.
             if (!this.lastAlertTime[medId] || (now - this.lastAlertTime[medId] > 300000)) {
+                // If on medicine page, don't double trigger via chat, let UI handle it.
+                // But for general pages, we need priority.
                 shouldTrigger = true;
                 this.lastAlertTime[medId] = now;
                 priorityReason = "MEDICINE DUE";
@@ -624,7 +786,7 @@ ${isProactive ? "INSTRUCTION: You are initiating a proactive check. Keep it role
             this.checkForProactiveAlerts((message) => {
                 if (typeof speak !== 'undefined') speak(message);
             });
-        }, 15000);
+        }, 120000); // Throttled to 2 mins to save API quota on free tier
     }
 }
 

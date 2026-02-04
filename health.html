@@ -8,22 +8,24 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js?v=2"></script>
 </head>
 
 <body>
-
-    <div class="container">
-        <div class="card" style="max-width: 800px; width: 100%;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 data-i18n="health">Health Tracker</h2>
-                <button onclick="window.location.href='dashboard.html'" class="secondary"
-                    style="width: auto; padding: 10px 15px;">
+    <div class="container"
+        style="background: radial-gradient(circle at top left, var(--secondary-color), transparent);">
+        <div class="card fade-in" style="max-width: 900px; width: 100%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-heartbeat" style="color: var(--primary-color); font-size: 2rem;"></i>
+                    <h2 style="margin: 0; color: var(--text-color);">Health Tracking & Reports</h2>
+                </div>
+                <button onclick="goBack()" class="secondary" style="width: auto; padding: 10px 20px;">
                     <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
                 </button>
             </div>
-
-            <!-- Input Form -->
-            <div class="card" style="background: rgba(0,0,0,0.03); margin-bottom: 20px; text-align: left;">
+            <div id="vitalsInputCard" class="card"
+                style="background: rgba(0,0,0,0.03); margin-bottom: 20px; text-align: left;">
                 <h3 class="mb-1" data-i18n="log_vitals">Log Vitals</h3>
                 <form id="healthForm">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -44,339 +46,387 @@
                         <label data-i18n="heart_rate">Heart Rate (BPM)</label>
                         <input type="number" id="heartRate" placeholder="72" required>
                     </div>
-
                     <button type="submit" data-i18n="save">Save Log</button>
-
-                    <button type="button" onclick="downloadReport()" class="secondary"
-                        style="margin-top: 15px; background-color: var(--secondary-color); color: white;">
-                        <i class="fas fa-file-pdf"></i> Download Health Report
+                    <button type="button" onclick="downloadReport()" class="primary" style="margin-top: 15px;">
+                        <i class="fas fa-file-pdf"></i> Download Comprehensive PDF Report
                     </button>
-
                     <button type="button" onclick="clearHealthHistory()" class="alert"
-                        style="margin-top: 15px; background-color: #d64545;">
-                        <i class="fas fa-trash"></i> <span data-i18n="delete_health">Delete Health Data</span>
+                        style="margin-top: 15px; width: auto; float: right;">
+                        <i class="fas fa-trash"></i> <span data-i18n="delete_health">Reset Data</span>
                     </button>
+                    <div style="clear: both;"></div>
                 </form>
-
-                <!-- Health Status Analysis -->
                 <div id="healthStatus" class="hidden"
                     style="margin-top: 15px; padding: 15px; border-radius: 8px; font-weight: bold; transition: all 0.5s ease;">
-                    <!-- JS will populate this -->
-                </div>
-
-                <!-- Health Status Analysis -->
-                <div id="healthStatus" class="hidden"
-                    style="margin-top: 15px; padding: 15px; border-radius: 8px; font-weight: bold; transition: all 0.5s ease;">
-                    <!-- JS will populate this -->
                 </div>
             </div>
-
-            <!-- Chart -->
-            <div style="height: 300px; width: 100%;">
+            <div style="height: 300px; width: 100%; margin-bottom: 20px;">
                 <canvas id="healthChart"></canvas>
             </div>
-
-            <!-- History List (Last 3) -->
-            <div id="historyList" style="margin-top: 20px; text-align: left;">
-                <!-- Logs -->
-            </div>
+            <div id="historyList" style="margin-top: 20px; text-align: left;"></div>
         </div>
     </div>
-
     <script src="js/utils.js"></script>
     <script>
         let healthChart;
-
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', function () {
             loadHealthData();
             loadFormInputs();
+            var urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('autoDownload') === 'true') {
+                setTimeout(function () {
+                    downloadReport();
+                    setTimeout(function () { window.location.href = 'dashboard.html'; }, 3000);
+                }, 1500);
+            }
         });
-
-        const healthForm = document.getElementById('healthForm');
-        healthForm.addEventListener('submit', (e) => {
+        function goBack() { window.location.href = 'dashboard.html'; }
+        document.getElementById('healthForm').addEventListener('submit', function (e) {
             e.preventDefault();
-            const sys = document.getElementById('bpSys').value;
-            const dia = document.getElementById('bpDia').value;
-            const sugar = document.getElementById('sugar').value;
-
-            const log = {
+            var log = {
                 date: new Date().toLocaleDateString(),
                 timestamp: Date.now(),
-                sys,
-                dia,
-                sugar
+                sys: document.getElementById('bpSys').value,
+                dia: document.getElementById('bpDia').value,
+                sugar: document.getElementById('sugar').value,
+                hr: document.getElementById('heartRate').value
             };
-
-            const data = getHealthData();
+            var data = getHealthData();
             data.push(log);
             localStorage.setItem('elderHealth', JSON.stringify(data));
-
-            // healthForm.reset(); // User wants values to stay
             loadHealthData();
-
-            // Speak result
             analyzeHealth(log, true);
         });
-
-        // Persist Form Inputs
-        const formInputs = ['bpSys', 'bpDia', 'sugar', 'heartRate'];
-        formInputs.forEach(id => {
-            document.getElementById(id).addEventListener('input', (e) => {
+        ['bpSys', 'bpDia', 'sugar', 'heartRate'].forEach(function (id) {
+            document.getElementById(id).addEventListener('input', function (e) {
                 localStorage.setItem('elderHealthForm_' + id, e.target.value);
             });
         });
-
         function loadFormInputs() {
-            formInputs.forEach(id => {
-                const val = localStorage.getItem('elderHealthForm_' + id);
+            ['bpSys', 'bpDia', 'sugar', 'heartRate'].forEach(function (id) {
+                var val = localStorage.getItem('elderHealthForm_' + id);
                 if (val) document.getElementById(id).value = val;
             });
         }
-
-        function getHealthData() {
-            return JSON.parse(localStorage.getItem('elderHealth') || '[]');
-        }
-
+        function getHealthData() { return JSON.parse(localStorage.getItem('elderHealth') || '[]'); }
         function analyzeHealth(log, shouldSpeak) {
-            const settings = getSettings();
-            const lang = settings.lang || 'en';
-
-            const sys = parseInt(log.sys);
-            const dia = parseInt(log.dia);
-            const hr = parseInt(log.hr || 0);
-
-            let status = 'good';
-            let issues = [];
-            let taIssues = [];
-
-            if (sys > 140 || dia > 90) {
-                status = 'bad';
-                issues.push("High Blood Pressure");
-                taIssues.push("இரத்த அழுத்தம் மிக அதிகமாக உள்ளது");
-            } else if (sys < 90 || dia < 60) {
-                status = 'bad';
-                issues.push("Low Blood Pressure");
-                taIssues.push("இரத்த அழுத்தம் குறைவாக உள்ளது");
-            }
-
-            if (hr > 100) {
-                status = 'bad';
-                issues.push("Fast Heart Rate");
-                taIssues.push("இதய துடிப்பு மிகவும் வேகமாக உள்ளது");
-            } else if (hr > 0 && hr < 50) {
-                status = 'bad';
-                issues.push("Slow Heart Rate");
-                taIssues.push("இதய துடிப்பு மிகவும் குறைவாக உள்ளது");
-            }
-
-            const statusDiv = document.getElementById('healthStatus');
+            var sys = parseInt(log.sys), dia = parseInt(log.dia), hr = parseInt(log.hr || 0);
+            var status = 'good', issues = [];
+            if (sys > 140 || dia > 90) { status = 'bad'; issues.push("High Blood Pressure"); }
+            else if (sys < 90 || dia < 60) { status = 'bad'; issues.push("Low Blood Pressure"); }
+            if (hr > 100) { status = 'bad'; issues.push("Fast Heart Rate"); }
+            else if (hr > 0 && hr < 50) { status = 'bad'; issues.push("Slow Heart Rate"); }
+            var statusDiv = document.getElementById('healthStatus');
+            if (isNaN(sys) || isNaN(dia)) { statusDiv.classList.add('hidden'); return; }
             statusDiv.classList.remove('hidden');
             statusDiv.style.opacity = '0';
-
-            let msg = "";
-            let displayHTML = "";
-
-            if (isNaN(sys) || isNaN(dia)) {
-                statusDiv.classList.add('hidden');
-                return;
-            }
-
+            var msg, displayHTML;
             if (status === 'good') {
-                statusDiv.style.backgroundColor = '#d4edda';
-                statusDiv.style.color = '#155724';
-                // Add context that this is from the last record
-                const prefix = lang === 'ta' ? "கடைசி பதிவு: " : "Last Record: ";
-                msg = lang === 'ta' ? "உங்கள் உடல்நிலை நன்றாக உள்ளது." : "Your health is Good.";
-                displayHTML = `<i class="fas fa-check-circle" style="font-size: 1.5rem; margin-right: 10px;"></i> <strong>${prefix}</strong>${msg}`;
+                statusDiv.style.backgroundColor = 'var(--secondary-color)';
+                statusDiv.style.color = 'var(--success-color)';
+                statusDiv.style.border = '1px solid var(--success-color)';
+                msg = "Health status is stable.";
+                displayHTML = '<i class="fas fa-check-circle" style="font-size: 1.5rem; margin-right: 10px;"></i> <strong>Last Record:</strong> ' + msg;
             } else {
-                statusDiv.style.backgroundColor = '#f8d7da';
-                statusDiv.style.color = '#721c24';
-                const prefix = lang === 'ta' ? "கடைசி பதிவு: " : "Last Record: ";
-                const issueText = lang === 'ta' ? taIssues.join(", மற்றும் ") : issues.join(", ");
-                const advice = lang === 'ta' ? "உடனடியாக மருத்துவரை அணுகவும்." : "Please consult a doctor.";
-                msg = lang === 'ta' ? `${issueText}. ${advice}` : `${issueText}. ${advice}`;
-                displayHTML = `<i class="fas fa-heartbeat" style="font-size: 1.5rem; margin-right: 10px; animation: pulse 1s infinite;"></i> <strong>${prefix}</strong>${msg}`;
+                statusDiv.style.backgroundColor = '#FFF5F5';
+                statusDiv.style.color = 'var(--error-color)';
+                statusDiv.style.border = '1px solid var(--error-color)';
+                msg = issues.join(", ") + ". Please consult a doctor.";
+                displayHTML = '<i class="fas fa-heartbeat" style="font-size: 1.5rem; margin-right: 10px; animation: pulse 1s infinite;"></i> <strong>Last Record:</strong> ' + msg;
             }
-
             statusDiv.innerHTML = displayHTML;
-            setTimeout(() => statusDiv.style.opacity = '1', 100);
-
+            setTimeout(function () { statusDiv.style.opacity = '1'; }, 100);
             if (shouldSpeak) speak(msg);
         }
-
         function loadHealthData() {
-            const data = getHealthData();
-            data.sort((a, b) => a.timestamp - b.timestamp);
-
+            var data = getHealthData();
+            data.sort(function (a, b) { return a.timestamp - b.timestamp; });
             renderChart(data);
-
-            const listObj = document.getElementById('historyList');
-            listObj.innerHTML = '<h3 class="mb-1" data-i18n="recent_logs">Recent Logs</h3>';
-
-            // Re-apply translation to injected HTML
-            updateText(getSettings().lang);
-
-            if (data.length === 0) listObj.innerHTML += `<p data-i18n="no_data">${getSettings().lang === 'ta' ? 'தரவு எதுவும் பதிவு செய்யப்படவில்லை.' : 'No data recorded yet.'}</p>`;
-            else {
-                // Restore status functionality for the latest log
-                const latestLog = data[data.length - 1]; // data is sorted ascending
-                analyzeHealth(latestLog, false); // false = don't speak on load
+            var listObj = document.getElementById('historyList');
+            listObj.innerHTML = '<h3 class="mb-1">Recent Logs</h3>';
+            if (data.length === 0) {
+                listObj.innerHTML += '<p>No data recorded yet.</p>';
+            } else {
+                analyzeHealth(data[data.length - 1], false);
+                data.slice().reverse().slice(0, 5).forEach(function (d) {
+                    var item = document.createElement('div');
+                    item.style.cssText = 'border-bottom:1px solid #ddd;padding:10px 0;display:flex;justify-content:space-between;align-items:center';
+                    item.innerHTML = '<div><strong>' + d.date + '</strong><br>BP: ' + d.sys + '/' + d.dia + ' | HR: ' + (d.hr || '-') + ' | Sugar: ' + (d.sugar || '-') + '</div><button class="secondary" onclick="deleteHealthLog(' + d.timestamp + ')" style="padding:5px 10px;font-size:0.8rem;background-color:#FFF5F5;color:var(--error-color);border:1px solid var(--error-color);width:auto"><i class="fas fa-trash"></i></button>';
+                    listObj.appendChild(item);
+                });
             }
-
-            [...data].reverse().slice(0, 3).forEach(d => {
-                const item = document.createElement('div');
-                item.style.borderBottom = '1px solid #ddd';
-                item.style.padding = '10px 0';
-                item.style.display = 'flex';
-                item.style.justifyContent = 'space-between';
-                item.style.alignItems = 'center';
-
-                item.innerHTML = `
-                    <div>
-                        <strong>${d.date}</strong>: BP ${d.sys}/${d.dia} | HR: ${d.hr || '-'} | Sugar: ${d.sugar || '-'}
-                    </div>
-                    <button class="secondary" onclick="deleteHealthLog(${d.timestamp})" style="padding: 5px 10px; font-size: 0.8rem; background-color: #f8d7da; color: #721c24;">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                `;
-                listObj.appendChild(item);
-            });
         }
-
         function renderChart(data) {
-            const ctx = document.getElementById('healthChart').getContext('2d');
-
-            // Limit to last 7 entries for clarity
-            const recentData = data.slice(-7);
-
-            const labels = recentData.map(d => d.date);
-            const sysData = recentData.map(d => d.sys);
-            const diaData = recentData.map(d => d.dia);
-
+            var ctx = document.getElementById('healthChart').getContext('2d');
+            var recent = data.slice(-10);
             if (healthChart) healthChart.destroy();
-
             healthChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Systolic BP',
-                            data: sysData,
-                            borderColor: 'rgb(255, 99, 132)',
-                            tension: 0.1
-                        },
-                        {
-                            label: 'Diastolic BP',
-                            data: diaData,
-                            borderColor: 'rgb(54, 162, 235)',
-                            tension: 0.1
-                        }
-                    ]
+                    labels: recent.map(function (d) { return d.date.split('/').slice(0, 2).join('/'); }),
+                    datasets: [{
+                        label: 'Systolic BP',
+                        data: recent.map(function (d) { return d.sys; }),
+                        borderColor: '#2ECC71',
+                        backgroundColor: 'rgba(46,204,113,0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'Diastolic BP',
+                        data: recent.map(function (d) { return d.dia; }),
+                        borderColor: '#1ABC9C',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        tension: 0.4
+                    }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
             });
         }
-
         function clearHealthHistory() {
             localStorage.removeItem('elderHealth');
-            loadHealthData(); // Reloads chart and list (empty)
+            loadHealthData();
             document.getElementById('healthStatus').classList.add('hidden');
-
-            const btn = document.querySelector('button[onclick="clearHealthHistory()"]');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-check"></i> Deleted';
-            setTimeout(() => btn.innerHTML = originalText, 2000);
-
-            // Clear inputs too
-            const formInputs = ['bpSys', 'bpDia', 'sugar', 'heartRate'];
-            formInputs.forEach(id => {
+            ['bpSys', 'bpDia', 'sugar', 'heartRate'].forEach(function (id) {
                 localStorage.removeItem('elderHealthForm_' + id);
                 document.getElementById(id).value = '';
             });
         }
-
         function deleteHealthLog(timestamp) {
-            let data = getHealthData();
-            data = data.filter(d => d.timestamp !== timestamp);
+            var data = getHealthData().filter(function (d) { return d.timestamp !== timestamp; });
             localStorage.setItem('elderHealth', JSON.stringify(data));
             loadHealthData();
-
-            // Re-analyze latest or hide
-            if (data.length > 0) {
-                analyzeHealth(data[data.length - 1], false);
-            } else {
-                document.getElementById('healthStatus').classList.add('hidden');
-            }
+            if (data.length === 0) document.getElementById('healthStatus').classList.add('hidden');
         }
-
         function downloadReport() {
-            const profile = JSON.parse(localStorage.getItem('elderProfile') || '{}');
-            const data = getHealthData();
-            const reminders = JSON.parse(localStorage.getItem('elderReminders') || '[]');
-            const appointments = JSON.parse(localStorage.getItem('elderAppointments') || '[]');
-            const falls = JSON.parse(localStorage.getItem('elderFalls') || '[]'); // Assuming falls are logged
+            try {
+                if (!window.jspdf) { alert('PDF library not loaded. Press Ctrl+F5 to refresh.'); return; }
+                const { jsPDF } = window.jspdf;
+                var doc = new jsPDF();
 
-            let report = `ELDER CARE HEALTH REPORT\n`;
-            report += `========================\n\n`;
-            report += `GENERATED ON: ${new Date().toLocaleString()}\n\n`;
+                var profile = JSON.parse(localStorage.getItem('elderProfile') || '{}');
+                var data = getHealthData();
+                var reminders = JSON.parse(localStorage.getItem('elderReminders') || '[]');
+                var appointments = JSON.parse(localStorage.getItem('elderAppointments') || '[]');
+                var falls = JSON.parse(localStorage.getItem('elderFalls') || '[]');
 
-            report += `1. PROFILE\n`;
-            report += `----------\n`;
-            report += `Name: ${profile.name || 'N/A'}\n`;
-            report += `Age: ${profile.age || 'N/A'}\n`;
-            report += `Conditions: ${profile.conditions || 'None'}\n\n`;
+                var now = new Date();
+                var weekAgo = new Date(now.getTime() - 604800000);
+                var weeklyData = data.filter(function (d) { return new Date(d.timestamp) >= weekAgo; });
+                var weeklyFalls = falls.filter(function (f) { return new Date(f.time || f.timestamp) >= weekAgo; });
 
-            report += `2. VITALS SUMMARY (Last 5 Logs)\n`;
-            report += `------------------------------\n`;
-            if (data.length === 0) report += `No vitals logged.\n`;
-            else {
-                data.slice(-5).reverse().forEach(log => {
-                    report += `${log.date}: BP ${log.sys}/${log.dia} | Sugar: ${log.sugar || 'N/A'} | HR: ${log.hr || 'N/A'}\n`;
-                });
+                // Calculate Health Score
+                var healthScore = 100;
+                var latest = data[data.length - 1] || {};
+
+                if (latest.sys > 140 || latest.dia > 90) healthScore -= 20;
+                else if (latest.sys < 90 || latest.dia < 60) healthScore -= 25;
+                if (latest.sugar > 180) healthScore -= 15;
+                if (latest.hr > 100 || (latest.hr > 0 && latest.hr < 50)) healthScore -= 10;
+
+                healthScore -= weeklyFalls.length * 10;
+
+                var takenMeds = reminders.filter(function (r) { return r.lastTaken; }).length;
+                var medAdh = reminders.length > 0 ? (takenMeds / reminders.length) * 100 : 100;
+                if (medAdh < 80) healthScore -= 15;
+
+                healthScore = Math.max(0, healthScore);
+
+                var status = "Excellent", color = [39, 174, 96];
+                if (healthScore < 90) { status = "Good"; color = [52, 152, 219]; }
+                if (healthScore < 75) { status = "Fair"; color = [243, 156, 18]; }
+                if (healthScore < 60) { status = "Needs Attention"; color = [231, 76, 60]; }
+
+                // --- HEADER ---
+                doc.setFillColor(46, 204, 113);
+                doc.rect(0, 0, 210, 45, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(22);
+                doc.text("COMPREHENSIVE HEALTH REPORT", 105, 25, { align: 'center' });
+                doc.setFontSize(11);
+                doc.text("Elder Care AI System", 105, 35, { align: 'center' });
+                doc.text("Generated: " + now.toLocaleString(), 105, 41, { align: 'center' });
+
+                var y = 60;
+
+                // --- PATIENT INFO & SUMMARY ROW ---
+                doc.setFillColor(250, 250, 250);
+                doc.setDrawColor(220);
+                doc.rect(15, y, 180, 40, 'FD');
+
+                doc.setTextColor(46, 204, 113);
+                doc.setFontSize(12);
+                doc.text("PATIENT PROFILE", 20, y + 8);
+
+                doc.setTextColor(50, 50, 50);
+                doc.setFontSize(10);
+                doc.text("Name: " + (profile.name || 'N/A'), 20, y + 18);
+                doc.text("Age: " + (profile.age || 'N/A'), 20, y + 25);
+                doc.text("Conditions: " + (profile.conditions || 'None').substring(0, 40), 20, y + 32);
+
+                doc.text("Hospital: " + (appointments.length > 0 ? appointments[0].hospital : 'Not set'), 110, y + 18);
+                doc.text("Emergency Contact: " + (profile.emergencyContact || 'Not set'), 110, y + 25);
+
+                y += 50;
+
+                // --- HEALTH SCORE ---
+                doc.setFillColor(color[0], color[1], color[2]);
+                doc.rect(15, y, 85, 30, 'F');
+                doc.setTextColor(255);
+                doc.setFontSize(12);
+                doc.text("HEALTH SCORE", 57.5, y + 8, { align: 'center' });
+                doc.setFontSize(22);
+                doc.text(healthScore + "% - " + status, 57.5, y + 22, { align: 'center' });
+
+                // Box 2: Weekly Summary
+                doc.setFillColor(245, 245, 245);
+                doc.setDrawColor(200);
+                doc.rect(110, y, 85, 30, 'FD');
+                doc.setTextColor(50);
+                doc.setFontSize(9);
+                doc.text("WEEKLY SUMMARY", 152.5, y + 8, { align: 'center' });
+                doc.text(`Vitals Logged: ${weeklyData.length}  |  Falls: ${weeklyFalls.length}`, 152.5, y + 16, { align: 'center' });
+                doc.text(`Med Adherence: ${medAdh.toFixed(0)}%`, 152.5, y + 24, { align: 'center' });
+
+                y += 45;
+
+                // --- 1. VITALS CHART ---
+                if (y > 240) { doc.addPage(); y = 20; }
+                doc.setFontSize(14);
+                doc.setTextColor(46, 204, 113);
+                doc.text("1. VITAL SIGNS HISTORY", 15, y);
+                y += 10;
+
+                try {
+                    var canvas = document.getElementById('healthChart');
+                    var tmp = document.createElement('canvas');
+                    tmp.width = canvas.width;
+                    tmp.height = canvas.height;
+                    var ctx = tmp.getContext('2d');
+                    ctx.fillStyle = "#ffffff";
+                    ctx.fillRect(0, 0, tmp.width, tmp.height);
+                    ctx.drawImage(canvas, 0, 0);
+
+                    var imgData = tmp.toDataURL('image/jpeg', 0.9);
+                    doc.addImage(imgData, 'JPEG', 15, y, 180, 70);
+                    y += 75;
+                } catch (e) {
+                    doc.setTextColor(150);
+                    doc.setFontSize(10);
+                    doc.text("Chart unavailable", 20, y + 10);
+                    y += 20;
+                }
+
+                if (latest.sys) {
+                    doc.setTextColor(50);
+                    doc.setFontSize(10);
+                    doc.text(`Latest (${latest.date}): BP ${latest.sys}/${latest.dia}, HR ${latest.hr || '-'}, Sugar ${latest.sugar || '-'}`, 20, y);
+                    y += 15;
+                }
+
+                // --- 2. MEDICATIONS ---
+                if (y > 230) { doc.addPage(); y = 20; }
+
+                doc.setFontSize(14);
+                doc.setTextColor(46, 204, 113);
+                doc.text("2. MEDICATIONS SCHEDULE", 15, y);
+                y += 10;
+
+                if (reminders.length === 0) {
+                    doc.setTextColor(100);
+                    doc.setFontSize(11);
+                    doc.text("No medications scheduled.", 20, y);
+                    y += 15;
+                } else {
+                    // Header
+                    doc.setFillColor(240, 240, 240);
+                    doc.rect(15, y, 180, 8, 'F');
+                    doc.setTextColor(0);
+                    doc.setFontSize(9);
+                    doc.setFont(undefined, 'bold');
+                    doc.text("Medicine", 20, y + 6);
+                    doc.text("Dosage", 90, y + 6);
+                    doc.text("Time", 130, y + 6);
+                    doc.text("Status", 170, y + 6);
+                    doc.setFont(undefined, 'normal');
+                    y += 10;
+
+                    reminders.forEach(function (r) {
+                        if (y > 275) { doc.addPage(); y = 20; }
+                        doc.setTextColor(50);
+                        doc.text(r.name, 20, y + 6);
+                        doc.text(r.dosage, 90, y + 6);
+                        doc.text(r.time, 130, y + 6);
+                        var isTaken = r.lastTaken === r.time;
+                        doc.setTextColor(isTaken ? [39, 174, 96] : [231, 76, 60]);
+                        doc.text(isTaken ? "TAKEN" : "PENDING", 170, y + 6);
+                        y += 8;
+                    });
+                    y += 12;
+                }
+
+                // --- 3. SAFETY ---
+                if (y > 240) { doc.addPage(); y = 20; }
+
+                doc.setFontSize(14);
+                doc.setTextColor(46, 204, 113);
+                doc.text("3. SAFETY & INCIDENTS", 15, y);
+                y += 10;
+
+                if (weeklyFalls.length === 0) {
+                    doc.setTextColor(39, 174, 96);
+                    doc.setFontSize(11);
+                    doc.text("No falls detected. Excellent safety record.", 20, y);
+                    y += 15;
+                } else {
+                    doc.setTextColor(231, 76, 60);
+                    doc.text(`WARNING: ${weeklyFalls.length} fall(s) detected this week.`, 20, y);
+                    y += 10;
+                    weeklyFalls.forEach(function (fall) {
+                        doc.setTextColor(50);
+                        doc.text("Incident: " + new Date(fall.time || fall.timestamp).toLocaleString(), 25, y);
+                        y += 6;
+                    });
+                    y += 10;
+                }
+
+                // --- 4. APPOINTMENTS ---
+                if (y > 250) { doc.addPage(); y = 20; }
+
+                doc.setFontSize(14);
+                doc.setTextColor(46, 204, 113);
+                doc.text("4. UPCOMING APPOINTMENTS", 15, y);
+                y += 10;
+
+                if (appointments.length === 0) {
+                    doc.setTextColor(100);
+                    doc.setFontSize(11);
+                    doc.text("No upcoming appointments.", 20, y);
+                    y += 15;
+                } else {
+                    appointments.forEach(function (apt) {
+                        doc.setTextColor(50);
+                        doc.text(`- ${apt.hospital} at ${apt.time}`, 20, y);
+                        y += 8;
+                    });
+                }
+
+                // Footer loop
+                var pageCount = doc.internal.getNumberOfPages();
+                for (var i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(150);
+                    doc.text("Confidential Health Record - Generated by Elder Care AI", 105, 290, { align: 'center' });
+                }
+
+                doc.save("Health_Report_" + (profile.name || 'Elder') + "_" + now.toISOString().split('T')[0] + ".pdf");
+                console.log('PDF saved!');
+
+            } catch (err) {
+                console.error('PDF Error:', err);
+                alert('Error generating PDF: ' + err.message);
             }
-            report += `\n`;
-
-            report += `3. MEDICINE ADHERENCE\n`;
-            report += `---------------------\n`;
-            if (reminders.length === 0) report += `No medicines scheduled.\n`;
-            else {
-                reminders.forEach(r => {
-                    report += `[ ] ${r.name} - ${r.time} (${r.dosage})\n`;
-                });
-            }
-            report += `\n`;
-
-            report += `4. APPOINTMENTS\n`;
-            report += `---------------\n`;
-            if (appointments.length === 0) report += `No appointments booked.\n`;
-            else {
-                appointments.forEach(a => {
-                    report += `${a.time}: ${a.hospital} (${a.status})\n`;
-                });
-            }
-            report += `\n`;
-
-            report += `5. RECENT ALERTS\n`;
-            report += `----------------\n`;
-            const notifications = JSON.parse(localStorage.getItem('elderNotifications') || '[]');
-            if (notifications.length === 0) report += `No alerts recorded.\n`;
-            else {
-                notifications.slice(0, 5).forEach(n => {
-                    report += `${new Date(n.time).toLocaleString()}: ${n.title} - ${n.message}\n`;
-                });
-            }
-
-            const blob = new Blob([report], { type: 'text/plain' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Health_Report_${profile.name || 'User'}_${new Date().toISOString().split('T')[0]}.txt`;
-            a.click();
-            window.URL.revokeObjectURL(url);
         }
     </script>
 </body>

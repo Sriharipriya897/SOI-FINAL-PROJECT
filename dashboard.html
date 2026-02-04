@@ -12,27 +12,28 @@
 
 <body>
 
-    <div class="container" style="justify-content: flex-start; padding-top: 40px;">
+    <div class="container"
+        style="justify-content: flex-start; padding-top: 40px; background: radial-gradient(circle at top right, var(--secondary-color), transparent);">
         <header
-            style="width: 100%; max-width: 1000px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+            style="width: 100%; max-width: 1100px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 50px; background: var(--card-bg); padding: 25px 35px; border-radius: 20px; box-shadow: var(--card-shadow); border: 1px solid rgba(46, 204, 113, 0.1);">
             <div>
-                <div>
-                    <h1 data-i18n="app_title">Elder Care Companion</h1>
-                    <p>
-                        <span data-i18n="welcome">Welcome</span>, <span id="usernameDisplay">User</span>
-                        (<span id="roleDisplay"
-                            style="color: var(--primary-color); font-weight: 600; text-transform: capitalize;">Elder</span>)
-                    </p>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="window.location.href='settings.html'" class="secondary"
-                        style="padding: 10px 20px; margin: 0;">
-                        <i class="fas fa-cog"></i> <span data-i18n="settings">Settings</span>
-                    </button>
-                    <button id="logoutBtn" class="alert" style="padding: 10px 20px; margin: 0;">
-                        <i class="fas fa-sign-out-alt"></i> <span data-i18n="logout">Logout</span>
-                    </button>
-                </div>
+                <h1 data-i18n="app_title" style="font-size: 2rem; margin-bottom: 5px;">Elder Care</h1>
+                <p style="margin: 0;">
+                    <span data-i18n="welcome">Welcome</span>, <span id="usernameDisplay"
+                        style="font-weight: 700; color: var(--text-color);">User</span>
+                    <span id="roleBadge"
+                        style="background: var(--secondary-color); color: var(--primary-color); padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; margin-left: 8px; text-transform: uppercase;">Elder</span>
+                </p>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <button onclick="window.location.href='settings.html'" class="secondary"
+                    style="padding: 12px 20px; margin: 0; width: auto;">
+                    <i class="fas fa-cog"></i> <span data-i18n="settings">Settings</span>
+                </button>
+                <button id="logoutBtn" class="alert" style="padding: 12px 20px; margin: 0; width: auto;">
+                    <i class="fas fa-sign-out-alt"></i> <span data-i18n="logout">Logout</span>
+                </button>
+            </div>
         </header>
 
         <div class="dashboard-grid" id="dashboardGrid">
@@ -54,20 +55,21 @@
                 <h3 data-i18n="fall_detection">Fall Detection</h3>
             </a>
 
-            <!-- Medicine (Elder, Caregiver) -->
-            <a href="medicine.html" class="dashboard-card" data-roles="elder,caregiver">
+            <!-- Medicine (Elder only) -->
+            <a href="medicine.html" class="dashboard-card" data-roles="elder">
                 <i class="fas fa-pills"></i>
                 <h3 data-i18n="medicine">Medicines</h3>
             </a>
 
             <!-- SOS (Elder only) -->
-            <a href="sos.html" class="dashboard-card" data-roles="elder" style="border-color: var(--error-color);">
+            <a href="sos.html" class="dashboard-card" data-roles="elder"
+                style="border-color: var(--error-color); background: #FFF5F5;">
                 <i class="fas fa-ambulance" style="color: var(--error-color);"></i>
                 <h3 data-i18n="sos" style="color: var(--error-color);">SOS Emergency</h3>
             </a>
 
-            <!-- Health Tracker (Elder, Hospital) -->
-            <a href="health.html" class="dashboard-card" data-roles="elder,hospital">
+            <!-- Health Tracker (Hospital & Caregiver) -->
+            <a href="health.html" class="dashboard-card" data-roles="hospital,caregiver">
                 <i class="fas fa-heartbeat"></i>
                 <h3 id="healthCardTitle">Health Tracker / Reports</h3>
             </a>
@@ -91,8 +93,7 @@
             </a>
 
             <!-- Nurse Portal (Hospital only) -->
-            <a href="nurse-portal.html" class="dashboard-card" data-roles="hospital"
-                style="background: rgba(44, 62, 80, 0.05);">
+            <a href="nurse-portal.html" class="dashboard-card" data-roles="hospital">
                 <i class="fas fa-user-nurse"></i>
                 <h3>Nurse Portal</h3>
             </a>
@@ -117,31 +118,12 @@
 
                 // Set initial role
                 const currentRole = localStorage.getItem('currentUserRole') || 'elder';
-                document.getElementById('roleDisplay').innerText = currentRole;
-                document.getElementById('roleSwitcher').value = currentRole;
+                document.getElementById('roleBadge').innerText = currentRole;
                 elderCareChatbot.setRole(currentRole);
 
                 // Filter Cards based on role
                 filterDashboard(currentRole);
             }
-
-            document.getElementById('roleSwitcher').addEventListener('change', (e) => {
-                const newRole = e.target.value;
-                elderCareChatbot.setRole(newRole);
-                document.getElementById('roleDisplay').innerText = newRole;
-                // Update session
-                const session = JSON.parse(localStorage.getItem('elderUser'));
-                if (session) {
-                    session.role = newRole;
-                    localStorage.setItem('elderUser', JSON.stringify(session));
-                }
-
-                filterDashboard(newRole);
-                alert(`Switched to ${newRole.toUpperCase()} view.`);
-                // We don't necessarily need window.location.reload() if we filter manually, 
-                // but it helps reset the AI context state too.
-                window.location.reload();
-            });
         });
 
         function filterDashboard(role) {
@@ -174,26 +156,22 @@
             document.getElementById(id).style.display = 'none';
         }
     </script>
-    <!-- About Modal (Re-used from Hub) -->
-    <div id="aboutModal" class="modal"
-        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(5px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
-        <div class="modal-content"
-            style="background:var(--card-bg); padding:40px; border-radius:20px; max-width:600px; width:100%; position:relative; box-shadow:var(--card-shadow); color:var(--text-color);">
-            <span class="close-modal" onclick="closeModal('aboutModal')"
-                style="position:absolute; top:20px; right:20px; font-size:1.5rem; cursor:pointer; color:grey;">&times;</span>
-            <h2 style="margin-bottom: 25px;">About Elder Care Companion</h2>
-            <div style="margin-bottom: 20px;">
-                <h4 style="color:var(--primary-color); margin-bottom:10px;"><i class="fas fa-question-circle"></i> What
-                    is this?</h4>
-                <p>Elder Care Companion is an AI-powered safety platform for senior citizens.</p>
-            </div>
-            <div style="margin-bottom: 20px;">
-                <h4 style="color:var(--primary-color); margin-bottom:10px;"><i class="fas fa-cog"></i> How it works?
+    <!-- About Modal -->
+    <div id="aboutModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('aboutModal')">&times;</span>
+            <h2 style="margin-bottom: 25px;">About Elder Care</h2>
+            <div style="margin-bottom: 25px;">
+                <h4 style="color:var(--primary-color); margin-bottom:12px;"><i class="fas fa-heart"></i> AI Companion
                 </h4>
-                <p>Uses AI vision for safety and Gemini for proactive companionship.</p>
+                <p>Personalized health tracking and proactive safety monitoring for seniors.</p>
             </div>
-            <button class="primary" onclick="closeModal('aboutModal')" style="width: 100%; margin-top: 10px;">Got
-                it!</button>
+            <div style="margin-bottom: 25px;">
+                <h4 style="color:var(--primary-color); margin-bottom:12px;"><i class="fas fa-shield-alt"></i> Safety
+                    First</h4>
+                <p>Advanced Fall and Object Detection powered by Computer Vision.</p>
+            </div>
+            <button class="primary" onclick="closeModal('aboutModal')">Close View</button>
         </div>
     </div>
 </body>

@@ -25,14 +25,18 @@
             font-weight: 600;
             font-size: 0.95rem;
             cursor: pointer;
-            transition: color 0.2s;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             gap: 8px;
+            padding: 8px 16px;
+            border-radius: 10px;
+            background: rgba(46, 204, 113, 0.05);
         }
 
         .header-link:hover {
             color: var(--primary-color);
+            background: rgba(46, 204, 113, 0.1);
         }
 
         .hub-main {
@@ -41,15 +45,15 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 40px 20px;
+            padding: 80px 20px;
+            background: radial-gradient(circle at top right, var(--secondary-color), transparent);
         }
 
         .role-hub-container {
             display: flex;
             flex-direction: row;
-            /* Horizontal Position */
-            gap: 25px;
-            margin-top: 40px;
+            gap: 30px;
+            margin-top: 50px;
             max-width: 1200px;
             width: 100%;
             justify-content: center;
@@ -58,96 +62,70 @@
 
         .role-card {
             background: var(--card-bg);
-            padding: 40px 30px;
-            border-radius: 20px;
+            padding: 50px 30px;
+            border-radius: 24px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 2px solid transparent;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            border: 1px solid rgba(46, 204, 113, 0.1);
             text-decoration: none;
             color: var(--text-color);
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
+            gap: 25px;
             width: 320px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            box-shadow: var(--card-shadow);
         }
 
         .role-card:hover {
-            transform: translateY(-10px);
+            transform: translateY(-12px);
             border-color: var(--primary-color);
-            box-shadow: 0 20px 40px rgba(76, 110, 245, 0.1);
+            box-shadow: var(--hover-shadow);
         }
 
         .role-icon {
-            font-size: 3.5rem;
+            font-size: 4rem;
             color: var(--primary-color);
-            height: 90px;
+            height: 100px;
+            width: 100px;
             display: flex;
             align-items: center;
             justify-content: center;
+            background: var(--secondary-color);
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .role-card:hover .role-icon {
+            transform: scale(1.1) rotate(5deg);
         }
 
         .role-info h3 {
             margin: 0;
-            font-size: 1.5rem;
-            margin-bottom: 10px;
+            font-size: 1.6rem;
+            margin-bottom: 12px;
+            color: var(--text-color);
         }
 
         .role-info p {
             margin: 0;
-            color: grey;
-            font-size: 0.95rem;
-            line-height: 1.5;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .modal-content {
-            background: var(--card-bg);
-            padding: 40px;
-            border-radius: 20px;
-            max-width: 600px;
-            width: 100%;
-            position: relative;
-            box-shadow: var(--card-shadow);
-            color: var(--text-color);
-        }
-
-        .close-modal {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: grey;
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.6;
         }
 
         .about-section {
-            margin-bottom: 25px;
+            margin-bottom: 30px;
         }
 
         .about-section h4 {
             color: var(--primary-color);
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            font-size: 1.2rem;
         }
 
         @media (max-width: 1000px) {
@@ -160,7 +138,8 @@
                 padding: 15px;
                 width: 100%;
                 justify-content: flex-end;
-                background: var(--bg-color);
+                background: rgba(255, 255, 255, 0.9);
+                backdrop-filter: blur(10px);
             }
         }
     </style>
@@ -260,11 +239,40 @@
 
         function exitApp() {
             localStorage.removeItem('elderUser');
-            // Try to close the window, or just go to a blank page if closing is blocked by browser
+
+            // First attempt to close
             window.close();
-            if (!window.closed) {
-                window.location.href = "about:blank";
-            }
+
+            // The 'open self' hack to trick browsers into allowing script-initiated close
+            // This works in many cases where the tab was opened from another page
+            setTimeout(() => {
+                if (!window.closed) {
+                    window.open('', '_self', '');
+                    window.close();
+                }
+
+                // If still not closed after a short delay, show a beautiful "Session Ended" view
+                // instead of a frustrating blank page.
+                setTimeout(() => {
+                    if (!window.closed) {
+                        document.body.innerHTML = `
+                            <div style="height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); color: #2c3e50; text-align: center; padding: 20px;">
+                                <div style="background: white; padding: 50px; border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); max-width: 450px; border: 1px solid rgba(46, 204, 113, 0.2);">
+                                    <div style="width: 80px; height: 80px; background: rgba(46, 204, 113, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 25px;">
+                                        <i class="fas fa-check" style="font-size: 2.5rem; color: #2ecc71;"></i>
+                                    </div>
+                                    <h2 style="margin-bottom: 15px; font-weight: 700; font-size: 1.8rem;">Session Ended</h2>
+                                    <p style="color: #64748b; margin-bottom: 30px; line-height: 1.6;">You have safely exited the Elder Care Companion. For your security, you can now close this browser tab.</p>
+                                    <button onclick="window.close(); if(!window.closed) { alert('Please close this tab manually using the X button at the top.'); }" 
+                                            style="background: #2ecc71; color: white; border: none; padding: 14px 35px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s; width: 100%; font-size: 1rem; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.2);">
+                                        Close Tab
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }, 100);
+            }, 50);
         }
 
         window.onclick = function (event) {

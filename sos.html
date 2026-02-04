@@ -66,41 +66,46 @@
 
 <body>
 
-    <div class="container">
-        <div class="card" style="max-width: 600px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2 data-i18n="sos">SOS Emergency</h2>
+    <div class="container"
+        style="background: radial-gradient(circle at top right, var(--secondary-color), transparent);">
+        <div class="card fade-in" style="max-width: 600px; border-bottom: 8px solid var(--error-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-ambulance" style="color: var(--error-color); font-size: 2rem;"></i>
+                    <h2 style="margin: 0; color: var(--text-color);">SOS Emergency</h2>
+                </div>
                 <button onclick="window.location.href='dashboard.html'" class="secondary"
-                    style="width: auto; padding: 10px 15px;">
+                    style="width: auto; padding: 10px 20px;">
                     <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
                 </button>
             </div>
 
-            <p class="mb-2" style="font-size: 1.2rem; margin-top: 20px;">
-                Press the button below to send an emergency alert.
+            <p class="mb-2" style="font-size: 1.1rem; color: var(--text-muted);">
+                Press and hold the button below to send an emergency alert to your contacts.
             </p>
 
-            <div style="position: relative; width: 250px; height: 250px; margin: 50px auto;">
+            <div style="position: relative; width: 260px; height: 260px; margin: 40px auto;">
                 <button class="sos-btn" id="sosBtn" onmousedown="startHold()" onmouseup="endHold()"
-                    ontouchstart="startHold()" ontouchend="endHold()" style="margin: 0;">
-                    <i class="fas fa-ambulance"></i>
-                    <span id="sosBtnText" style="font-size: 2rem; display: block; margin-top: 10px;">SOS</span>
+                    ontouchstart="startHold()" ontouchend="endHold()"
+                    style="margin: 0; width: 260px; height: 260px; background: var(--error-color); border: 8px solid white; box-shadow: 0 15px 35px rgba(231, 76, 60, 0.3);">
+                    <i class="fas fa-ambulance" style="color: white; font-size: 4rem;"></i>
+                    <span id="sosBtnText"
+                        style="font-size: 1.8rem; display: block; margin-top: 10px; color: white; font-weight: 700;">SOS</span>
                 </button>
-                <svg class="hold-progress" width="250" height="250"
+                <svg class="hold-progress" width="260" height="260"
                     style="position: absolute; top: 0; left: 0; pointer-events: none; transform: rotate(-90deg);">
-                    <circle cx="125" cy="125" r="120" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="10">
+                    <circle cx="130" cy="130" r="125" fill="none" stroke="rgba(46, 204, 113, 0.1)" stroke-width="10">
                     </circle>
-                    <circle id="holdCircle" cx="125" cy="125" r="120" fill="none" stroke="white" stroke-width="10"
-                        stroke-dasharray="754" stroke-dashoffset="754"
+                    <circle id="holdCircle" cx="130" cy="130" r="125" fill="none" stroke="var(--primary-color)"
+                        stroke-width="10" stroke-dasharray="785" stroke-dashoffset="785"
                         style="transition: stroke-dashoffset 0.1s linear;"></circle>
                 </svg>
             </div>
 
             <div id="statusMsg" class="hidden"
-                style="margin-top: 20px; font-weight: bold; font-size: 1.2rem; color: var(--error-color);">
-                <div>Alert Sent! Opening Email & WhatsApp...</div>
-                <div style="font-size: 1rem; color: black; margin-top: 10px;">Please confirm sending in the external
-                    apps.</div>
+                style="margin-top: 30px; padding: 20px; border-radius: 15px; background: #FFF5F5; border: 1px solid var(--error-color); font-weight: 600;">
+                <div style="color: var(--error-color); font-size: 1.2rem; margin-bottom: 5px;">Alert Triggered!</div>
+                <div style="font-size: 0.95rem; color: var(--text-color);">Opening communication channels...</div>
             </div>
         </div>
     </div>

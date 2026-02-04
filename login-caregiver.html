@@ -9,50 +9,66 @@
 </head>
 
 <body>
-    <div class="container">
-        <div class="card">
-            <h1 data-i18n="app_title" class="mb-2">Elder Care Companion</h1>
+    <div class="container"
+        style="background: radial-gradient(circle at bottom left, var(--secondary-color), transparent);">
+        <div class="card fade-in">
+            <div style="margin-bottom: 30px;">
+                <i class="fas fa-user-nurse"
+                    style="font-size: 3.5rem; color: var(--primary-color); margin-bottom: 15px;"></i>
+                <h1 data-i18n="app_title" style="font-size: 2.2rem; margin: 0;">Elder Care</h1>
+                <p style="color: var(--text-muted);">Caregiver Management Portal</p>
+            </div>
+
             <div id="login-container">
-                <h2 class="mb-1">Caregiver Login</h2>
+                <h2 style="font-size: 1.5rem; margin-bottom: 25px; color: var(--text-color);">Caregiver Login</h2>
                 <form id="loginForm">
                     <input type="hidden" id="defaultRole" value="caregiver">
-                    <input type="text" id="username" data-i18n-placeholder="username" placeholder="Username" required
-                        autocomplete="username">
-                    <input type="password" id="password" data-i18n-placeholder="password" placeholder="Password"
-                        required autocomplete="current-password">
-                    <button type="submit">Login</button>
-                    <p style="margin-top: 1rem; font-size: 0.9rem;">
-                        New User? <a href="#" id="showRegister" style="color: var(--primary-color);">Register here</a>
-                </form>
-            </div>
-            <div id="register-container" style="display: none;">
-                <h2 class="mb-1">Register</h2>
-                <form id="registerForm">
-                    <input type="text" id="reg-username" placeholder="Choose Username" required autocomplete="username">
-                    <input type="password" id="reg-password" placeholder="Choose Password" required
-                        autocomplete="new-password">
-                    <button type="submit">Register</button>
-                    <p style="margin-top: 1rem; font-size: 0.9rem;">
-                        Already have an account? <a href="#" id="showLogin" style="color: var(--primary-color);">Login
-                            here</a>
+                    <div
+                        style="text-align: left; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; color: var(--text-muted); margin-left: 5px;">
+                        Username</div>
+                    <input type="text" id="username" data-i18n-placeholder="username" placeholder="Enter your username"
+                        required autocomplete="username">
+                    <div
+                        style="text-align: left; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; color: var(--text-muted); margin-left: 5px; margin-top: 10px;">
+                        Password</div>
+                    <input type="password" id="password" data-i18n-placeholder="password"
+                        placeholder="Enter your password" required autocomplete="current-password">
+                    <button type="submit" style="margin-top: 25px;">
+                        Login to Portal <i class="fas fa-sign-in-alt"></i>
+                    </button>
+                    <p style="margin-top: 20px; font-size: 0.95rem;">
+                        New User? <a href="#" id="showRegister"
+                            style="color: var(--primary-color); font-weight: 600;">Register here</a>
                     </p>
                 </form>
             </div>
 
+            <div id="register-container" style="display: none;">
+                <h2 style="font-size: 1.5rem; margin-bottom: 25px; color: var(--text-color);">Create Account</h2>
+                <form id="registerForm">
+                    <div
+                        style="text-align: left; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; color: var(--text-muted); margin-left: 5px;">
+                        Username</div>
+                    <input type="text" id="reg-username" placeholder="Choose a username" required
+                        autocomplete="username">
+                    <div
+                        style="text-align: left; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; color: var(--text-muted); margin-left: 5px; margin-top: 10px;">
+                        Password</div>
+                    <input type="password" id="reg-password" placeholder="Create a password" required
+                        autocomplete="new-password">
+                    <button type="submit" style="margin-top: 25px;">
+                        Register Now <i class="fas fa-user-plus"></i>
+                    </button>
+                    <p style="margin-top: 20px; font-size: 0.95rem;">
+                        Already have an account? <a href="#" id="showLogin"
+                            style="color: var(--primary-color); font-weight: 600;">Login here</a>
+                    </p>
+                </form>
+            </div>
         </div>
     </div>
     <script src="js/utils.js"></script>
     <script src="js/auth.js"></script>
-    <script>
-        const langSelect = document.getElementById('langSelect');
-        const currentSettings = getSettings();
-        langSelect.value = currentSettings.lang;
-        langSelect.addEventListener('change', (e) => {
-            const s = getSettings();
-            s.lang = e.target.value;
-            saveSettings(s);
-        });
-    </script>
 </body>
 
 </html>

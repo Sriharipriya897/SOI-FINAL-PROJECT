@@ -4,42 +4,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elder Care - Nurse Portal</title>
+    <title>Elder Care Companion - Nurse Portal</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .portal-header {
-            background: #2c3e50;
-            color: white;
-            padding: 20px;
+            background: radial-gradient(circle at top right, var(--secondary-color), transparent);
+            color: var(--text-color);
+            padding: 30px;
             text-align: center;
-            border-radius: 12px 12px 0 0;
+            border-bottom: 2px solid var(--primary-color);
         }
     </style>
 </head>
 
-<body style="background: #f0f2f5;">
-    <div class="container">
-        <div class="card" style="max-width: 900px; padding: 0; overflow: hidden;">
+<body>
+    <div class="container" style="background: var(--bg-color);">
+        <div class="card fade-in"
+            style="max-width: 900px; padding: 0; overflow: hidden; border: none; box-shadow: var(--card-shadow);">
             <div class="portal-header">
-                <h2><i class="fas fa-user-nurse"></i> Hospital / Nurse Portal</h2>
-                <p>Authorized Access Only</p>
+                <i class="fas fa-user-nurse"
+                    style="font-size: 3rem; color: var(--primary-color); margin-bottom: 10px;"></i>
+                <h2 style="margin: 0; color: var(--text-color);">Hospital / Nurse Portal</h2>
+                <p style="color: var(--text-muted);">Authorized Medical Access & Control</p>
             </div>
 
             <div style="padding: 20px;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                    <!-- Authoritative Prescriptions -->
+                    <!-- Authoritative Prescriptions (Managed via Chatbot Intelligence) -->
                     <div class="card"
-                        style="text-align: left; background: var(--card-bg); color: var(--text-color); border: 1px solid #ddd;">
-                        <h3><i class="fas fa-prescription"></i> Add Authoritative Prescription</h3>
-                        <p class="mb-1" style="font-size: 0.8rem; color: #666;">This will automatically sync with the
-                            elder's reminders.</p>
-                        <form id="prescForm">
-                            <input type="text" id="pName" placeholder="Medicine Name" required>
-                            <input type="text" id="pDosage" placeholder="Dosage (e.g. 1-0-1)" required>
-                            <input type="time" id="pTime" required>
-                            <button type="submit" class="primary">Add & Sync</button>
-                        </form>
+                        style="text-align: left; background: var(--card-bg); color: var(--text-color); border: 1px solid #ddd; opacity: 0.9;">
+                        <h3><i class="fas fa-robot"></i> AI Prescription Assistant</h3>
+                        <p class="mb-1" style="font-size: 0.9rem; color: #666;">
+                            To prescribe medicines, use the <strong>Companion Chat</strong>. <br>
+                            Example: <em>"Prescribe Metformin 500mg at 10:00 AM"</em>
+                        </p>
+                        <button onclick="window.location.href='chat.html'" class="secondary"
+                            style="margin-top: 10px; font-size: 0.9rem;">
+                            <i class="fas fa-comments"></i> Open Chat
+                        </button>
                     </div>
 
                     <!-- Vitals Entry -->
@@ -56,25 +59,31 @@
                 </div>
 
                 <!-- Current Prescriptions List -->
-                <div class="card" style="margin-top: 20px; text-align: left;">
-                    <h3><i class="fas fa-list-ul"></i> Current Prescriptions</h3>
+                <div class="card" style="margin-top: 20px; text-align: left; border: 1px solid rgba(0,0,0,0.05);">
+                    <h3 style="color: var(--text-color); margin-bottom: 15px;"><i class="fas fa-list-ul"
+                            style="color: var(--primary-color);"></i> Current Prescriptions</h3>
                     <div id="prescList" style="margin-top: 15px;">
                         <!-- List of medicines will be injected here -->
                     </div>
                 </div>
 
                 <!-- Summary & Reports -->
-                <div class="card" style="margin-top: 20px; text-align: left;">
-                    <h3><i class="fas fa-file-medical"></i> Elder Health Summary</h3>
-                    <div id="nurseSummary" style="margin-bottom: 15px;">
+                <div class="card"
+                    style="margin-top: 20px; text-align: left; background: var(--secondary-color); border: none;">
+                    <h3 style="color: var(--primary-color); margin-bottom: 15px;"><i class="fas fa-file-medical"></i>
+                        Elder Health Summary</h3>
+                    <div id="nurseSummary" style="margin-bottom: 15px; font-weight: 500;">
                         <!-- Summary injected here -->
                     </div>
-                    <button onclick="window.location.href='health.html'" class="secondary">Go to Health
-                        Analytics</button>
+                    <button onclick="window.location.href='health.html'" class="secondary"
+                        style="background: white; color: var(--primary-color);">View Full Health Analytics</button>
                 </div>
 
-                <div style="margin-top: 20px; text-align: center;">
-                    <button onclick="window.location.href='dashboard.html'" class="alert">Exit Nurse Portal</button>
+                <div style="margin-top: 30px; text-align: center;">
+                    <button onclick="window.location.href='dashboard.html'" class="alert"
+                        style="width: auto; padding: 12px 30px;">
+                        <i class="fas fa-sign-out-alt"></i> Exit Nurse Portal
+                    </button>
                 </div>
             </div>
         </div>
@@ -89,37 +98,7 @@
             loadPrescriptions();
         });
 
-        document.getElementById('prescForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const reminders = JSON.parse(localStorage.getItem('elderReminders') || '[]');
-            const name = document.getElementById('pName').value;
-            const dosage = document.getElementById('pDosage').value;
-            const time = document.getElementById('pTime').value;
-
-            if (editingMedId) {
-                // Update existing
-                const index = reminders.findIndex(r => r.id === editingMedId);
-                if (index !== -1) {
-                    reminders[index] = { ...reminders[index], name, dosage, time };
-                }
-                editingMedId = null;
-                document.querySelector('#prescForm button').innerText = 'Add & Sync';
-            } else {
-                // Add new
-                reminders.push({
-                    id: Date.now(),
-                    name,
-                    dosage,
-                    time,
-                    source: 'Nurse/Hospital'
-                });
-            }
-
-            localStorage.setItem('elderReminders', JSON.stringify(reminders));
-            alert("Prescription synced successfully.");
-            e.target.reset();
-            loadPrescriptions();
-        });
+        // Manual form removed, but logic kept safe or removed
 
         function loadPrescriptions() {
             const reminders = JSON.parse(localStorage.getItem('elderReminders') || '[]');
@@ -149,10 +128,7 @@
                         <small><i class="fas fa-clock"></i> ${r.time} ${r.source ? `(${r.source})` : ''}</small>
                     </div>
                     <div>
-                        <button onclick="editPrescription(${r.id})" style="padding: 5px 10px; font-size: 0.8rem; background: var(--secondary-color); color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px;">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="deletePrescription(${r.id})" style="padding: 5px 10px; font-size: 0.8rem; background: #d64545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        <button onclick="deletePrescription(${r.id})" style="padding: 5px 10px; font-size: 0.8rem; background: var(--error-color); color: white; border: none; border-radius: 4px; cursor: pointer;">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -166,19 +142,6 @@
             reminders = reminders.filter(r => r.id !== id);
             localStorage.setItem('elderReminders', JSON.stringify(reminders));
             loadPrescriptions();
-        }
-
-        function editPrescription(id) {
-            const reminders = JSON.parse(localStorage.getItem('elderReminders') || '[]');
-            const med = reminders.find(r => r.id === id);
-            if (med) {
-                document.getElementById('pName').value = med.name;
-                document.getElementById('pDosage').value = med.dosage;
-                document.getElementById('pTime').value = med.time;
-                editingMedId = id;
-                document.querySelector('#prescForm button').innerText = 'Update & Sync';
-                document.getElementById('pName').focus();
-            }
         }
 
         document.getElementById('vitalsForm').addEventListener('submit', (e) => {
@@ -209,7 +172,7 @@
                 container.innerHTML = `
                     <p>Elder: <strong>${profile.name}</strong> (Age: ${profile.age})</p>
                     <p>Latest BP: <strong>${latest.sys}/${latest.dia}</strong> (Logged on ${latest.date})</p>
-                    <p>Target: 120/80. Status: ${parseInt(latest.sys) > 130 ? '<span style="color:red">Needs Attention</span>' : '<span style="color:green">Stable</span>'}</p>
+                    <p>Target: 120/80. Status: ${parseInt(latest.sys) > 130 ? '<span style="color:var(--error-color)">Needs Attention</span>' : '<span style="color:var(--success-color)">Stable</span>'}</p>
                 `;
             }
         }

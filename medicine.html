@@ -11,12 +11,16 @@
 
 <body>
 
-    <div class="container">
-        <div class="card" style="max-width: 800px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 data-i18n="medicine">Medicines</h2>
+    <div class="container"
+        style="background: radial-gradient(circle at top left, var(--secondary-color), transparent);">
+        <div class="card fade-in" style="max-width: 850px; width: 100%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-pills" style="color: var(--primary-color); font-size: 2rem;"></i>
+                    <h2 style="margin: 0; color: var(--text-color);">Medication Schedule</h2>
+                </div>
                 <button onclick="window.location.href='dashboard.html'" class="secondary"
-                    style="width: auto; padding: 10px 15px;">
+                    style="width: auto; padding: 10px 20px;">
                     <i class="fas fa-arrow-left"></i> <span data-i18n="back">Back</span>
                 </button>
             </div>
@@ -44,17 +48,37 @@
                 <!-- Items will be injected here -->
             </div>
 
-            <button onclick="clearAllMedicines()" class="alert" style="margin-top: 20px; background-color: #d64545;">
+            <button onclick="clearAllMedicines()" class="alert"
+                style="margin-top: 20px; background-color: var(--error-color);">
                 <i class="fas fa-trash"></i> Delete All Medicines
             </button>
         </div>
     </div>
 
     <!-- Alarm Audio -->
-    <audio id="alarmSound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" preload="auto"></audio>
+    <audio id="alarmSound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" preload="auto"
+        loop></audio>
+
+    <!-- Custom Alarm Modal -->
+    <div id="alarmModal" class="modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center;">
+        <div class="card"
+            style="background: white; padding: 50px; text-align: center; border-radius: 20px; animation: pulse 1s infinite; max-width: 90%;">
+            <i class="fas fa-pills" style="font-size: 5rem; color: var(--primary-color); margin-bottom: 30px;"></i>
+            <h2 style="color: var(--text-color); margin-bottom: 20px; font-size: 2rem;">Medicine Time!</h2>
+            <p id="alarmMsg" style="font-size: 1.5rem; margin-bottom: 40px; color: var(--text-color);">Please take
+                your medicine.</p>
+            <button onclick="stopAlarm()" class="primary"
+                style="font-size: 1.5rem; padding: 20px 50px; border-radius: 50px; width: 100%;">
+                <i class="fas fa-check"></i> I Have Taken It
+            </button>
+        </div>
+    </div>
 
     <script src="js/utils.js"></script>
     <script>
+        let isAlarmPlaying = false;
+
         document.addEventListener('DOMContentLoaded', () => {
             loadReminders();
             // Check immediately in case we opened it right on time
@@ -103,20 +127,25 @@
 
             reminders.forEach(r => {
                 const item = document.createElement('div');
-                item.className = 'card';
-                item.style.marginBottom = '10px';
-                item.style.padding = '15px';
+                item.className = 'card fade-in';
+                item.style.marginBottom = '15px';
+                item.style.padding = '25px';
                 item.style.display = 'flex';
                 item.style.justifyContent = 'space-between';
                 item.style.alignItems = 'center';
+                item.style.borderLeft = '6px solid var(--primary-color)';
                 // Override card width for list items
                 item.style.maxWidth = '100%';
+
+                const takenText = r.lastTaken === r.time
+                    ? `<span style="color:var(--success-color); font-weight:bold;"><i class="fas fa-check-circle"></i> Taken</span>`
+                    : '';
 
                 item.innerHTML = `
                     <div>
                         <strong style="font-size: 1.2rem;">${r.time}</strong>
                         <h4 style="margin: 5px 0;">${r.name}</h4>
-                        <p>${r.dosage}</p>
+                        <p>${r.dosage} ${takenText}</p>
                     </div>
                     <button class="alert" onclick="deleteReminder(${r.id})" style="width: auto; padding: 8px 15px;">
                         <i class="fas fa-trash"></i>
@@ -134,35 +163,73 @@
         }
 
         function checkReminders() {
+            if (isAlarmPlaying) return; // Don't trigger overlapping alarms
+
             const now = new Date();
             const currentHours = String(now.getHours()).padStart(2, '0');
             const currentMinutes = String(now.getMinutes()).padStart(2, '0');
             const currentTime = `${currentHours}:${currentMinutes}`;
 
             const reminders = getReminders();
-            reminders.forEach(r => {
-                if (r.time === currentTime) {
-                    playAlert(r);
-                }
-            });
+            const matching = reminders.find(r => r.time === currentTime && r.lastTaken !== currentTime);
+
+            if (matching) {
+                playAlert(matching);
+            }
         }
 
         function playAlert(reminder) {
+            isAlarmPlaying = true;
             const audio = document.getElementById('alarmSound');
+            audio.currentTime = 0;
             audio.play().catch(e => {
                 console.log('Audio autoplay blocked', e);
-                alert("Please interact with the page (click somewhere) to allow audio playback.");
             });
 
             const msg = `Time to take medicine: ${reminder.name} (${reminder.dosage})`;
+            document.getElementById('alarmMsg').innerText = msg;
+            document.getElementById('alarmModal').style.display = 'flex';
+
+            // Speak naturally
             speak(msg);
-            alert(msg);
+            // Repeat speak every 5 seconds if still playing (simple loop)
+            const speakInterval = setInterval(() => {
+                if (!isAlarmPlaying) clearInterval(speakInterval);
+                else speak("Please take medicine " + reminder.name);
+            }, 8000);
+        }
+
+        function stopAlarm() {
+            const audio = document.getElementById('alarmSound');
+            audio.pause();
+            audio.currentTime = 0;
+            document.getElementById('alarmModal').style.display = 'none';
+            isAlarmPlaying = false;
+
+            // Mark as taken
+            const now = new Date();
+            const currentHours = String(now.getHours()).padStart(2, '0');
+            const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+            const currentTime = `${currentHours}:${currentMinutes}`;
+
+            let reminders = getReminders();
+            // Find just-active reminders
+            reminders = reminders.map(r => {
+                if (r.time === currentTime) {
+                    return { ...r, lastTaken: currentTime };
+                }
+                return r;
+            });
+            localStorage.setItem('elderReminders', JSON.stringify(reminders));
+            loadReminders(); // Refresh list to show checkmark
+            speak("Thank you. Medicine marked as taken.");
         }
 
         function testAudio() {
             const audio = document.getElementById('alarmSound');
             audio.currentTime = 0;
             audio.play().catch(e => alert("Audio blocked. Click the page first!"));
+            setTimeout(() => { audio.pause(); }, 3000);
             speak("Testing alarm sound.");
         }
 
